@@ -19,6 +19,7 @@ import 'package:provider/provider.dart';
 class InformationScreen extends StatelessWidget {
   const InformationScreen({Key? key}) : super(key: key);
 
+
   @override
   Widget build(BuildContext context) {
     final themeChange = Provider.of<DarkThemeProvider>(context);

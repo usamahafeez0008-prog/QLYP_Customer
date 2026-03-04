@@ -1,0 +1,49 @@
+{
+  "project_info": {
+    "project_number": "783922444856",
+    "firebase_url": "https://qlyp-282f3-default-rtdb.firebaseio.com",
+    "project_id": "qlyp-282f3",
+    "storage_bucket": "qlyp-282f3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:783922444856:android:e4b45cba836de38a0d04cd",
+        "android_client_info": {
+          "package_name": "com.codesteem.qlyp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB_OGDt0ul9dwtsOlnXDzWZ7qV1TBVECnU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:783922444856:android:a90aacb3394df1180d04cd",
+        "android_client_info": {
+          "package_name": "com.codesteem.qlyp_driver"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB_OGDt0ul9dwtsOlnXDzWZ7qV1TBVECnU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

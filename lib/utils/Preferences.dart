@@ -8,6 +8,7 @@ class Preferences {
   static const isFinishOnBoardingKey = "isFinishOnBoardingKey";
   static const contactList = "contactList";
   static const notificationPlayload = "notificationPlayload";
+  static const userId = "userId";
 
   static late SharedPreferences pref;
 

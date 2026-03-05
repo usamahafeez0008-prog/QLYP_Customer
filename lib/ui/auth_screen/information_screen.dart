@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:country_code_picker/country_code_picker.dart';
 import 'package:customer/constant/constant.dart';
@@ -9,342 +7,267 @@ import 'package:customer/model/referral_model.dart';
 import 'package:customer/model/user_model.dart';
 import 'package:customer/themes/app_colors.dart';
 import 'package:customer/ui/dashboard_screen.dart';
-import 'package:customer/utils/DarkThemeProvider.dart';
 import 'package:customer/utils/fire_store_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
 
 class InformationScreen extends StatelessWidget {
   const InformationScreen({Key? key}) : super(key: key);
 
-
   @override
   Widget build(BuildContext context) {
-    final themeChange = Provider.of<DarkThemeProvider>(context);
-
-    final bool isDark = true;
-
     return GetX<InformationController>(
       init: InformationController(),
       builder: (controller) {
         return Scaffold(
-          backgroundColor: AppColors.qlypCharcoal,
-          body: Stack(
-            children: [
-              // Background gradient
-              Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      AppColors.qlypCharcoal,
-                      AppColors.qlypOffWhite,
-                      AppColors.qlypPrimarySunYellow,
-                    ],
+          backgroundColor: AppColors.background,
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_ios,
+                  color: Colors.black, size: 20),
+              onPressed: () => Get.back(),
+            ),
+          ),
+          body: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const SizedBox(height: 10),
+                // Illustration
+                Center(
+                  child: Image.asset(
+                    "assets/images/otp_image.png", // Using a fallback that might match the illustration
+                    height: 200,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) =>
+                        Image.asset("assets/images/otp_image.png", height: 200),
                   ),
                 ),
-              ),
+                const SizedBox(height: 12),
 
-              // Soft glow blobs
-              Positioned(
-                top: -80,
-                left: -60,
-                child: _GlowBlob(
-                    color: AppColors.qlypDeepNavy.withOpacity(0.35),
-                    size: 220),
-              ),
-              Positioned(
-                top: 140,
-                right: -90,
-                child: _GlowBlob(
-                    color: AppColors.qlypSecondaryWarmSand.withOpacity(0.18),
-                    size: 260),
-              ),
-              Positioned(
-                bottom: -120,
-                left: -80,
-                child: _GlowBlob(
-                    color: AppColors.qlypPrimaryFreshGreen.withOpacity(0.10),
-                    size: 320),
-              ),
+                // Title & Subtitle
+                Text(
+                  "Sign up".tr,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  "Create your account to start using QLYP".tr,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w400,
+                    color: AppColors.subTitleColor,
+                  ),
+                ),
+                const SizedBox(height: 30),
 
-              SafeArea(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(18, 14, 18, 22),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(22),
-                        child: Stack(
-                          children: [
-                            Image.asset(
-                              "assets/images/new_login_image_1.png",
-                              width: double.infinity,
-                              height: 260,
-                              fit: BoxFit.cover,
-                            ),
-
-                            // Dark overlay
-                            Positioned.fill(
-                              child: DecoratedBox(
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topCenter,
-                                    end: Alignment.bottomCenter,
-                                    colors: [
-                                      AppColors.qlypCharcoal.withOpacity(0.20),
-                                      AppColors.qlypCharcoal.withOpacity(0.78),
-                                    ],
-                                  ),
-                                ),
+                // Form
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _InputFieldLabel(label: "Full Name".tr, isDark: false),
+                    _StandardTextField(
+                      hint: 'Enter your full name'.tr,
+                      controller: controller.fullNameController.value,
+                      isDark: false,
+                      textInputType: TextInputType.name,
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          flex: 4,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _InputFieldLabel(label: "Pays".tr, isDark: false),
+                              _CountryPickerField(
+                                initialSelection: controller.countryCode.value,
+                                onCountryChanged: (value) => controller
+                                    .countryCode
+                                    .value = value.dialCode.toString(),
+                                isDark: false,
                               ),
-                            ),
-
-                            // Content (Logo + Title + Subtitle)
-                            Positioned(
-                              left: 16,
-                              right: 16,
-                              bottom: 16,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Image.asset(
-                                    "assets/app_logo.png",
-                                    width: 60,
-                                    color: AppColors.qlypPrimaryFreshGreen,
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    "Sign up".tr,
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppColors.qlypPrimaryFreshGreen,
-                                      height: 1.2,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    "Create your account to start using QlYP"
-                                        .tr,
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 13.5,
-                                      fontWeight: FontWeight.w400,
-                                      color: AppColors.qlypSecondaryWarmSand
-                                          .withOpacity(0.90),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 18),
-
-                      const SizedBox(height: 18),
-
-                      // Glass card container
-                      _GlassCard(
-                        child: Column(
-                          children: [
-                            _GlassTextField(
-                              hint: 'Full name'.tr,
-                              controller: controller.fullNameController.value,
-                              textInputType: TextInputType.name,
-                            ),
-                            const SizedBox(height: 12),
-
-                            // Phone Field (preserving your enabled logic + country picker)
-                            _GlassPhoneField(
-                              themeChange: themeChange,
-                              enabled: controller.loginType.value ==
-                                      Constant.phoneLoginType
-                                  ? false
-                                  : true,
-                              controller:
-                                  controller.phoneNumberController.value,
-                              initialSelection: controller.countryCode.value,
-                              onCountryChanged: (value) => controller
-                                  .countryCode
-                                  .value = value.dialCode.toString(),
-                            ),
-                            const SizedBox(height: 12),
-
-                            _GlassTextField(
-                              hint: 'Email'.tr,
-                              controller: controller.emailController.value,
-                              enabled: controller.loginType.value ==
-                                      Constant.googleLoginType
-                                  ? false
-                                  : true,
-                              textInputType: TextInputType.emailAddress,
-                            ),
-                            const SizedBox(height: 12),
-
-                            _GlassTextField(
-                              hint: 'Referral Code (Optional)'.tr,
-                              controller: controller.referralCodeController.value,
-                              textInputType: TextInputType.text,
-                            ),
-
-                            const SizedBox(height: 18),
-
-                            // Primary CTA (gradient like your OTP button)
-                            _PrimaryGradientButton(
-                              title: "Create account".tr,
-                              onPressed: () async {
-                                // --- NO FUNCTIONAL CHANGES BELOW (same logic as your code) ---
-                                if (controller
-                                    .fullNameController.value.text.isEmpty) {
-                                  ShowToastDialog.showToast(
-                                      "Please enter full name".tr);
-                                } else if (controller.emailController.value.text.isEmpty) {
-                                  ShowToastDialog.showToast(
-                                      "Please enter email".tr);
-                                } else if (controller
-                                    .phoneNumberController.value.text.isEmpty) {
-                                  ShowToastDialog.showToast(
-                                      "Please enter phone".tr);
-                                } else if (Constant.validateEmail(controller
-                                        .emailController.value.text) ==
-                                    false) {
-                                  ShowToastDialog.showToast(
-                                      "Please enter valid email".tr);
-                                } else {
-                                  if (controller.referralCodeController.value
-                                      .text.isNotEmpty) {
-                                    FireStoreUtils.checkReferralCodeValidOrNot(
-                                            controller.referralCodeController
-                                                .value.text)
-                                        .then((value) async {
-                                      if (value == true) {
-                                        ShowToastDialog.showLoader(
-                                            "Please wait".tr);
-                                        UserModel userModel =
-                                            controller.userModel.value;
-                                        userModel.fullName = controller
-                                            .fullNameController.value.text;
-                                        userModel.email = controller
-                                            .emailController.value.text;
-                                        userModel.countryCode =
-                                            controller.countryCode.value;
-                                        userModel.phoneNumber = controller
-                                            .phoneNumberController.value.text;
-                                        userModel.isActive = true;
-                                        userModel.createdAt = Timestamp.now();
-
-                                        await FireStoreUtils
-                                                .getReferralUserByCode(
-                                                    controller
-                                                        .referralCodeController
-                                                        .value
-                                                        .text)
-                                            .then((value) async {
-                                          if (value != null) {
-                                            ReferralModel ownReferralModel =
-                                                ReferralModel(
-                                              id: FireStoreUtils
-                                                  .getCurrentUid(),
-                                              referralBy: value.id,
-                                              referralCode:
-                                                  Constant.getReferralCode(),
-                                            );
-                                            await FireStoreUtils.referralAdd(
-                                                ownReferralModel);
-                                          } else {
-                                            ReferralModel referralModel =
-                                                ReferralModel(
-                                              id: FireStoreUtils
-                                                  .getCurrentUid(),
-                                              referralBy: "",
-                                              referralCode:
-                                                  Constant.getReferralCode(),
-                                            );
-
-                                            await FireStoreUtils.referralAdd(
-                                                referralModel);
-                                          }
-                                        });
-
-                                        await FireStoreUtils.updateUser(
-                                                userModel)
-                                            .then((value) {
-                                          ShowToastDialog.closeLoader();
-                                          if (value == true) {
-                                            ShowToastDialog.showToast("Home Screen Coming Soon");
-                                            //Get.offAll(const DashBoardScreen());
-                                          }
-                                        });
-                                      } else {
-                                        ShowToastDialog.showToast(
-                                            "Referral code Invalid".tr);
-                                      }
-                                    });
-                                  } else {
-                                    ShowToastDialog.showLoader(
-                                        "Please wait".tr);
-                                    UserModel userModel =
-                                        controller.userModel.value;
-                                    userModel.fullName = controller
-                                        .fullNameController.value.text;
-                                    userModel.email =
-                                        controller.emailController.value.text;
-                                    userModel.countryCode =
-                                        controller.countryCode.value;
-                                    userModel.phoneNumber = controller
-                                        .phoneNumberController.value.text;
-                                    userModel.isActive = true;
-                                    userModel.createdAt = Timestamp.now();
-
-                                    ReferralModel referralModel = ReferralModel(
-                                      id: FireStoreUtils.getCurrentUid(),
-                                      referralBy: "",
-                                      referralCode: Constant.getReferralCode(),
-                                    );
-                                    await FireStoreUtils.referralAdd(
-                                        referralModel);
-
-                                    await FireStoreUtils.updateUser(userModel)
-                                        .then((value) {
-                                      ShowToastDialog.closeLoader();
-                                      if (value == true) {
-                                        ShowToastDialog.showToast("Home Screen Coming Soon");
-                                        //Get.offAll(const DashBoardScreen());
-                                      }
-                                    });
-                                  }
-                                }
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 14),
-
-                      // Small footer hint (optional, keeps it classy)
-                      Center(
-                        child: Text(
-                          "By continuing, you agree to our terms.".tr,
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.poppins(
-                            fontSize: 11.5,
-                            color:
-                                AppColors.qlypSecondaryWarmSand.withOpacity(0.65),
+                            ],
                           ),
                         ),
-                      ),
-                    ],
-                  ),
+                        Expanded(
+                          flex: 6,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _InputFieldLabel(
+                                  label: "Numéro de téléphone".tr,
+                                  isDark: false),
+                              _StandardTextField(
+                                hint: 'Phone number'.tr,
+                                controller:
+                                    controller.phoneNumberController.value,
+                                isDark: false,
+                                enabled: controller.loginType.value !=
+                                    Constant.phoneLoginType,
+                                textInputType: TextInputType.phone,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    _InputFieldLabel(label: "Email".tr, isDark: false),
+                    _StandardTextField(
+                      hint: 'Enter your email'.tr,
+                      controller: controller.emailController.value,
+                      isDark: false,
+                      enabled: controller.loginType.value !=
+                          Constant.googleLoginType,
+                      textInputType: TextInputType.emailAddress,
+                    ),
+                    const SizedBox(height: 20),
+                    _InputFieldLabel(label: "Password".tr, isDark: false),
+                    _StandardTextField(
+                      hint: 'Enter your password'.tr,
+                      controller: controller.passwordController.value,
+                      isDark: false,
+                      obscureText: true,
+                      textInputType: TextInputType.visiblePassword,
+                    ),
+                    const SizedBox(height: 20),
+                    // _InputFieldLabel(
+                    //     label: 'Referral Code (Optional)'.tr, isDark: false),
+                    // _StandardTextField(
+                    //   hint: 'Enter referral code'.tr,
+                    //   controller: controller.referralCodeController.value,
+                    //   isDark: false,
+                    //   textInputType: TextInputType.text,
+                    // ),
+                  ],
                 ),
-              ),
-            ],
+
+                const SizedBox(height: 30),
+
+                // Create Account Button
+                _PrimaryDarkButton(
+                  title: "Create account".tr,
+                  onPressed: () async {
+                    // --- NO FUNCTIONAL CHANGES BELOW (same logic as your code) ---
+                    if (controller.fullNameController.value.text.isEmpty) {
+                      ShowToastDialog.showToast("Please enter full name".tr);
+                    } else if (controller.emailController.value.text.isEmpty) {
+                      ShowToastDialog.showToast("Please enter email".tr);
+                    } else if (controller
+                        .phoneNumberController.value.text.isEmpty) {
+                      ShowToastDialog.showToast("Please enter phone".tr);
+                    } else if (Constant.validateEmail(
+                            controller.emailController.value.text) ==
+                        false) {
+                      ShowToastDialog.showToast("Please enter valid email".tr);
+                    } else if (controller
+                        .passwordController.value.text.isEmpty) {
+                      ShowToastDialog.showToast("Please enter password".tr);
+                    } else {
+                      if (controller
+                          .referralCodeController.value.text.isNotEmpty) {
+                        FireStoreUtils.checkReferralCodeValidOrNot(
+                                controller.referralCodeController.value.text)
+                            .then((value) async {
+                          if (value == true) {
+                            ShowToastDialog.showLoader("Please wait".tr);
+                            UserModel userModel = controller.userModel.value;
+                            userModel.fullName =
+                                controller.fullNameController.value.text;
+                            userModel.email =
+                                controller.emailController.value.text;
+                            userModel.countryCode =
+                                controller.countryCode.value;
+                            userModel.phoneNumber =
+                                controller.phoneNumberController.value.text;
+                            userModel.password =
+                                controller.passwordController.value.text;
+                            userModel.isActive = true;
+                            userModel.createdAt = Timestamp.now();
+
+                            await FireStoreUtils.getReferralUserByCode(
+                                    controller
+                                        .referralCodeController.value.text)
+                                .then((value) async {
+                              if (value != null) {
+                                ReferralModel ownReferralModel = ReferralModel(
+                                  id: FireStoreUtils.getCurrentUid(),
+                                  referralBy: value.id,
+                                  referralCode: Constant.getReferralCode(),
+                                );
+                                await FireStoreUtils.referralAdd(
+                                    ownReferralModel);
+                              } else {
+                                ReferralModel referralModel = ReferralModel(
+                                  id: FireStoreUtils.getCurrentUid(),
+                                  referralBy: "",
+                                  referralCode: Constant.getReferralCode(),
+                                );
+                                await FireStoreUtils.referralAdd(referralModel);
+                              }
+                            });
+
+                            await FireStoreUtils.updateUser(userModel)
+                                .then((value) {
+                              ShowToastDialog.closeLoader();
+                              if (value == true) {
+                                Get.offAll(const DashBoardScreen());
+                              }
+                            });
+                          } else {
+                            ShowToastDialog.showToast(
+                                "Referral code Invalid".tr);
+                          }
+                        });
+                      } else {
+                        ShowToastDialog.showLoader("Please wait".tr);
+                        UserModel userModel = controller.userModel.value;
+                        userModel.fullName =
+                            controller.fullNameController.value.text;
+                        userModel.email = controller.emailController.value.text;
+                        userModel.countryCode = controller.countryCode.value;
+                        userModel.phoneNumber =
+                            controller.phoneNumberController.value.text;
+                        userModel.password =
+                            controller.passwordController.value.text;
+                        userModel.isActive = true;
+                        userModel.createdAt = Timestamp.now();
+
+                        ReferralModel referralModel = ReferralModel(
+                          id: FireStoreUtils.getCurrentUid(),
+                          referralBy: "",
+                          referralCode: Constant.getReferralCode(),
+                        );
+                        await FireStoreUtils.referralAdd(referralModel);
+
+                        await FireStoreUtils.updateUser(userModel)
+                            .then((value) {
+                          ShowToastDialog.closeLoader();
+                          if (value == true) {
+
+                            Get.offAll(const DashBoardScreen());
+                          }
+                        });
+                      }
+                    }
+                  },
+                ),
+                const SizedBox(height: 50),
+
+              ],
+            ),
           ),
         );
       },
@@ -352,255 +275,146 @@ class InformationScreen extends StatelessWidget {
   }
 }
 
-class _GlowBlob extends StatelessWidget {
-  final Color color;
-  final double size;
+class _InputFieldLabel extends StatelessWidget {
+  final String label;
+  final bool isDark;
 
-  const _GlowBlob({required this.color, required this.size});
+  const _InputFieldLabel({required this.label, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8, left: 4),
+      child: Text(
+        label,
+        style: GoogleFonts.plusJakartaSans(
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+          color: isDark ? Colors.white : Colors.black,
+        ),
+      ),
+    );
+  }
+}
+
+class _StandardTextField extends StatelessWidget {
+  final String hint;
+  final TextEditingController controller;
+  final bool isDark;
+  final bool enabled;
+  final bool obscureText;
+  final TextInputType textInputType;
+
+  const _StandardTextField({
+    required this.hint,
+    required this.controller,
+    required this.isDark,
+    this.enabled = true,
+    this.obscureText = false,
+    this.textInputType = TextInputType.text,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TextFormField(
+      controller: controller,
+      enabled: enabled,
+      obscureText: obscureText,
+      keyboardType: textInputType,
+      style: GoogleFonts.plusJakartaSans(
+        fontSize: 14,
+        color: isDark ? Colors.white : Colors.black,
+      ),
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: GoogleFonts.plusJakartaSans(
+          fontSize: 14,
+          color: isDark ? Colors.white38 : Colors.black38,
+        ),
+        filled: true,
+        fillColor: isDark ? AppColors.darkTextField : Colors.white,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+              color: isDark
+                  ? AppColors.darkTextFieldBorder
+                  : AppColors.textFieldBorder),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+              color: isDark
+                  ? AppColors.darkTextFieldBorder
+                  : AppColors.textFieldBorder),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide:
+              const BorderSide(color: AppColors.qlypDeepNavy, width: 1.5),
+        ),
+        disabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+              color: isDark
+                  ? AppColors.darkTextFieldBorder.withOpacity(0.5)
+                  : AppColors.textFieldBorder.withOpacity(0.5)),
+        ),
+      ),
+    );
+  }
+}
+
+class _CountryPickerField extends StatelessWidget {
+  final String initialSelection;
+  final void Function(CountryCode value) onCountryChanged;
+  final bool isDark;
+
+  const _CountryPickerField({
+    required this.initialSelection,
+    required this.onCountryChanged,
+    required this.isDark,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: size,
-      height: size,
+      height: 58,
       decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: color,
-            blurRadius: 60,
-            spreadRadius: 12,
-          ),
-        ],
+        color: isDark ? AppColors.darkTextField : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+            color: isDark
+                ? AppColors.darkTextFieldBorder
+                : AppColors.textFieldBorder),
       ),
-    );
-  }
-}
-
-class _GlassCard extends StatelessWidget {
-  final Widget child;
-
-  const _GlassCard({required this.child});
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(22),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 18),
-          decoration: BoxDecoration(
-            color: AppColors.qlypCharcoal.withOpacity(0.45),
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(
-                color: AppColors.qlypSecondaryWarmSand.withOpacity(0.22),
-                width: 1),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.qlypOffWhite.withOpacity(0.45),
-                blurRadius: 24,
-                offset: const Offset(0, 14),
-              ),
-            ],
-          ),
-          child: child,
+      child: CountryCodePicker(
+        onChanged: onCountryChanged,
+        initialSelection: initialSelection,
+        showCountryOnly: false,
+        showOnlyCountryWhenClosed: false,
+        alignLeft: false,
+        dialogBackgroundColor:
+            isDark ? AppColors.darkBackground : AppColors.background,
+        textStyle: GoogleFonts.plusJakartaSans(
+          fontSize: 14,
+          color: isDark ? Colors.white : Colors.black,
+          fontWeight: FontWeight.w500,
+        ),
+        flagDecoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(2),
         ),
       ),
     );
   }
 }
 
-class _GlassTextField extends StatelessWidget {
-  final String hint;
-  final TextEditingController controller;
-  final bool enabled;
-  final TextInputType textInputType;
-
-  const _GlassTextField({
-    required this.hint,
-    required this.controller,
-    this.enabled = true,
-    this.textInputType = TextInputType.text,
-  });
-
-  static const Color qlypPrimaryLight = AppColors.qlypPrimaryFreshGreen;
-  static const Color qlypSecondaryLight = AppColors.qlypSecondaryWarmSand;
-  static const Color qlypMutedRose = AppColors.qlypDeepNavy;
-  static const Color qlypDark = AppColors.qlypCharcoal;
-
-  @override
-  Widget build(BuildContext context) {
-    return TextFormField(
-      controller: controller,
-      enabled: enabled,
-      keyboardType: textInputType,
-      cursorColor: AppColors.qlypSecondaryWarmSand,
-      style: GoogleFonts.poppins(
-        fontSize: 13.5,
-        color: qlypPrimaryLight.withOpacity(enabled ? 0.95 : 0.60),
-        fontWeight: FontWeight.w500,
-      ),
-      decoration: InputDecoration(
-        hintText: hint,
-        hintStyle: GoogleFonts.poppins(
-          fontSize: 13.2,
-          color: qlypSecondaryLight.withOpacity(0.65),
-          fontWeight: FontWeight.w400,
-        ),
-        isDense: true,
-        filled: true,
-        fillColor: qlypDark.withOpacity(0.35),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: qlypSecondaryLight.withOpacity(0.18)),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: qlypSecondaryLight.withOpacity(0.18)),
-        ),
-        disabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: qlypSecondaryLight.withOpacity(0.10)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: qlypMutedRose, width: 1.2),
-        ),
-      ),
-    );
-  }
-}
-class _GlassPhoneField extends StatelessWidget {
-  final DarkThemeProvider themeChange;
-  final bool enabled;
-  final TextEditingController controller;
-  final String initialSelection;
-  final void Function(CountryCode value) onCountryChanged;
-
-  const _GlassPhoneField({
-    required this.themeChange,
-    required this.enabled,
-    required this.controller,
-    required this.initialSelection,
-    required this.onCountryChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = themeChange.getThem();
-
-    return TextFormField(
-      validator: (value) => value != null && value.isNotEmpty ? null : 'Required',
-      keyboardType: TextInputType.number,
-      textCapitalization: TextCapitalization.sentences,
-      controller: controller,
-      cursorColor: AppColors.qlypSecondaryWarmSand,
-      enabled: enabled,
-      style: GoogleFonts.poppins(
-        fontSize: 13.5,
-        color: AppColors.qlypPrimaryFreshGreen.withOpacity(enabled ? 0.95 : 0.60),
-        fontWeight: FontWeight.w500,
-      ),
-      decoration: InputDecoration(
-        hintText: "Phone number".tr,
-        hintStyle: GoogleFonts.poppins(
-          fontSize: 13.2,
-          color: AppColors.qlypSecondaryWarmSand.withOpacity(0.65),
-          fontWeight: FontWeight.w400,
-        ),
-        isDense: true,
-        filled: true,
-        fillColor: AppColors.qlypCharcoal.withOpacity(0.35),
-        contentPadding: const EdgeInsets.symmetric(vertical: 14),
-        prefixIcon: Padding(
-          padding: const EdgeInsets.only(left: 6, right: 6),
-          child: Theme(
-            data: Theme.of(context).copyWith(
-              textSelectionTheme: const TextSelectionThemeData(
-                cursorColor: AppColors.qlypSecondaryWarmSand,
-              ),
-            ),
-            child: CountryCodePicker(
-              onChanged: onCountryChanged,
-              dialogBackgroundColor:
-              isDark ? AppColors.qlypCharcoal : AppColors.qlypPrimaryFreshGreen,
-              initialSelection: initialSelection,
-              comparator: (a, b) => b.name!.compareTo(a.name.toString()),
-              flagDecoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(4),
-              ),
-              textStyle: GoogleFonts.poppins(
-                color: AppColors.qlypPrimaryFreshGreen.withOpacity(0.9),
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
-              padding: EdgeInsets.zero,
-
-              // ✅ Search field theme (removes default green, uses QLYP)
-              searchDecoration: InputDecoration(
-                hintText: "Search country".tr,
-                hintStyle: GoogleFonts.poppins(
-                  color: AppColors.qlypPrimaryFreshGreen.withOpacity(0.5),
-                  fontSize: 14,
-                ),
-                prefixIcon: const Icon(
-                  Icons.search,
-                  color: AppColors.qlypSecondaryWarmSand,
-                ),
-                enabledBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(
-                    color: AppColors.qlypSecondaryWarmSand.withOpacity(0.4),
-                  ),
-                ),
-                focusedBorder: const UnderlineInputBorder(
-                  borderSide: BorderSide(
-                    color: AppColors.qlypSecondaryWarmSand,
-                    width: 1.6,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-        prefixIconConstraints: const BoxConstraints(minWidth: 110),
-
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(
-            color: AppColors.qlypSecondaryWarmSand.withOpacity(0.18),
-          ),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(
-            color: AppColors.qlypSecondaryWarmSand.withOpacity(0.18),
-          ),
-        ),
-        disabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(
-            color: AppColors.qlypSecondaryWarmSand.withOpacity(0.10),
-          ),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(
-            color: AppColors.qlypDeepNavy,
-            width: 1.2,
-          ),
-        ),
-      ),
-    );
-  }
-}
-class _PrimaryGradientButton extends StatelessWidget {
+class _PrimaryDarkButton extends StatelessWidget {
   final String title;
   final VoidCallback onPressed;
 
-  const _PrimaryGradientButton({
+  const _PrimaryDarkButton({
     required this.title,
     required this.onPressed,
   });
@@ -609,42 +423,21 @@ class _PrimaryGradientButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: double.infinity,
-      height: 54,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(18),
-          gradient: LinearGradient(
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-            colors: [
-              AppColors.qlypPrimaryFreshGreen.withOpacity(0.92),
-              AppColors.qlypSecondaryWarmSand.withOpacity(0.92),
-            ],
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.qlypOffWhite.withOpacity(0.55),
-              blurRadius: 22,
-              offset: const Offset(0, 14),
-            ),
-          ],
+      height: 56,
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.qlypDeepNavy,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          elevation: 0,
         ),
-        child: ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.transparent,
-            shadowColor: Colors.transparent,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-          ),
-          onPressed: onPressed,
-          child: Text(
-            title,
-            style: GoogleFonts.poppins(
-              fontSize: 14.5,
-              fontWeight: FontWeight.w700,
-              color: AppColors.qlypPrimarySunYellow,
-              letterSpacing: 0.2,
-            ),
+        onPressed: onPressed,
+        child: Text(
+          title,
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
           ),
         ),
       ),

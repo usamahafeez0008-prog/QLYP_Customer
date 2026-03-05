@@ -7,6 +7,7 @@ import 'package:customer/controller/login_controller.dart';
 import 'package:customer/model/user_model.dart';
 import 'package:customer/themes/app_colors.dart';
 import 'package:customer/ui/auth_screen/information_screen.dart';
+import 'package:customer/ui/auth_screen/login_with_password_screen.dart';
 import 'package:customer/ui/dashboard_screen.dart';
 import 'package:customer/ui/terms_and_condition/terms_and_condition_screen.dart';
 import 'package:customer/utils/DarkThemeProvider.dart';
@@ -26,16 +27,13 @@ class LoginScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
     final themeChange = Provider.of<DarkThemeProvider>(context);
 
     return GetX<LoginController>(
       init: LoginController(),
       builder: (controller) {
-
         return Stack(
           children: [
-
             /// BACKGROUND IMAGE
             Positioned.fill(
               child: Image.asset(
@@ -60,11 +58,9 @@ class LoginScreen extends StatelessWidget {
               body: SafeArea(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
-
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-
                       const SizedBox(height: 10),
 
                       /// Illustration
@@ -104,12 +100,10 @@ class LoginScreen extends StatelessWidget {
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-
                           /// Country picker
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-
                               Text(
                                 "Pays".tr,
                                 style: GoogleFonts.plusJakartaSans(
@@ -118,9 +112,7 @@ class LoginScreen extends StatelessWidget {
                                   color: Colors.black87,
                                 ),
                               ),
-
                               const SizedBox(height: 8),
-
                               Container(
                                 height: 52,
                                 decoration: BoxDecoration(
@@ -134,14 +126,14 @@ class LoginScreen extends StatelessWidget {
                                     controller.countryCode.value =
                                         value.dialCode.toString();
                                   },
-                                  dialogBackgroundColor: AppColors.qlypCharcoal.withOpacity(0.8),
+                                  dialogBackgroundColor:
+                                      AppColors.qlypCharcoal.withOpacity(0.8),
                                   initialSelection:
-                                  controller.countryCode.value,
+                                      controller.countryCode.value,
                                   comparator: (a, b) =>
                                       b.name!.compareTo(a.name.toString()),
                                   flagDecoration: BoxDecoration(
-                                    borderRadius:
-                                    BorderRadius.circular(4),
+                                    borderRadius: BorderRadius.circular(4),
                                   ),
                                   textStyle: GoogleFonts.poppins(
                                     color: Colors.black,
@@ -160,72 +152,49 @@ class LoginScreen extends StatelessWidget {
                           /// Phone number input
                           Expanded(
                             child: Column(
-                              crossAxisAlignment:
-                              CrossAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-
                                 Text(
                                   "Numéro de téléphone".tr,
                                   style: GoogleFonts.plusJakartaSans(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w700,
-                                    color:
-                                    Colors.black87,
+                                    color: Colors.black87,
                                   ),
                                 ),
-
                                 const SizedBox(height: 8),
-
                                 Container(
                                   height: 52,
                                   decoration: BoxDecoration(
                                     color: Colors.white,
-                                    borderRadius:
-                                    BorderRadius.circular(10),
+                                    borderRadius: BorderRadius.circular(10),
                                     border: Border.all(
-                                        color: const Color(
-                                            0xffE2E5EA)),
+                                        color: const Color(0xffE2E5EA)),
                                   ),
-                                  padding:
-                                  const EdgeInsets.symmetric(
+                                  padding: const EdgeInsets.symmetric(
                                       horizontal: 16),
                                   child: Center(
                                     child: TextFormField(
                                       validator: (value) =>
-                                      value != null &&
-                                          value.isNotEmpty
-                                          ? null
-                                          : 'Required'.tr,
-                                      keyboardType:
-                                      TextInputType.number,
+                                          value != null && value.isNotEmpty
+                                              ? null
+                                              : 'Required'.tr,
+                                      keyboardType: TextInputType.number,
                                       controller: controller
-                                          .phoneNumberController
-                                          .value,
-                                      cursorColor:
-                                      const Color(0xff0C1A30),
-                                      style:
-                                      GoogleFonts.poppins(
-                                        color: const Color(
-                                            0xff0C1A30),
+                                          .phoneNumberController.value,
+                                      cursorColor: const Color(0xff0C1A30),
+                                      style: GoogleFonts.poppins(
+                                        color: const Color(0xff0C1A30),
                                         fontSize: 14,
-                                        fontWeight:
-                                        FontWeight.w500,
+                                        fontWeight: FontWeight.w500,
                                       ),
-                                      decoration:
-                                      InputDecoration(
-                                        border:
-                                        InputBorder.none,
-                                        hintText:
-                                        "(514) 000-0000",
-                                        hintStyle:
-                                        GoogleFonts
-                                            .plusJakartaSans(
-                                          color: const Color(
-                                              0xffC4C5C4),
+                                      decoration: InputDecoration(
+                                        border: InputBorder.none,
+                                        hintText: "(514) 000-0000",
+                                        hintStyle: GoogleFonts.plusJakartaSans(
+                                          color: const Color(0xffC4C5C4),
                                           fontSize: 14,
-                                          fontWeight:
-                                          FontWeight
-                                              .w400,
+                                          fontWeight: FontWeight.w400,
                                         ),
                                       ),
                                     ),
@@ -244,16 +213,11 @@ class LoginScreen extends StatelessWidget {
                         width: double.infinity,
                         height: 52,
                         child: ElevatedButton(
-                          onPressed: () =>
-                              controller.sendCode(),
+                          onPressed: () => controller.sendCode(),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                            const Color(0xff12223b),
-                            shape:
-                            RoundedRectangleBorder(
-                              borderRadius:
-                              BorderRadius.circular(
-                                  10),
+                            backgroundColor: const Color(0xff12223b),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
                             ),
                             elevation: 0,
                           ),
@@ -261,8 +225,27 @@ class LoginScreen extends StatelessWidget {
                             "Continuer".tr,
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 15,
-                              fontWeight:
-                              FontWeight.w600,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      /// Navigate to Password Login
+                      Align(
+                        alignment: Alignment.bottomRight,
+                        child: InkWell(
+                          onTap: () {
+                            Get.to(() => const LoginWithPasswordScreen());
+                          },
+                          child: Text(
+                            "Already Have An Account! Login".tr,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
                               color: Colors.white,
                             ),
                           ),
@@ -281,17 +264,13 @@ class LoginScreen extends StatelessWidget {
                             ),
                           ),
                           Padding(
-                            padding:
-                            const EdgeInsets.symmetric(
-                                horizontal: 14),
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
                             child: Text(
                               "Ou connectez-vous avec".tr,
-                              style:
-                              GoogleFonts.plusJakartaSans(
+                              style: GoogleFonts.plusJakartaSans(
                                 fontSize: 12,
-                                fontWeight:
-                                FontWeight.w500,
-                                color:Colors.white,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.white,
                               ),
                             ),
                           ),
@@ -308,10 +287,8 @@ class LoginScreen extends StatelessWidget {
 
                       /// SOCIAL LOGIN ROW
                       Row(
-                        mainAxisAlignment:
-                        MainAxisAlignment.center,
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-
                           /// GOOGLE
                           InkWell(
                             onTap: () {},
@@ -332,21 +309,16 @@ class LoginScreen extends StatelessWidget {
                             ),
                           ),
 
-
                           /// APPLE
                           if (Platform.isIOS)
                             InkWell(
                               onTap: () async {
-
-                                ShowToastDialog.showLoader(
-                                    "Please wait".tr);
+                                ShowToastDialog.showLoader("Please wait".tr);
 
                                 await controller
                                     .signInWithApple()
                                     .then((value) async {
-
-                                  ShowToastDialog
-                                      .closeLoader();
+                                  ShowToastDialog.closeLoader();
 
                                   /// ORIGINAL APPLE LOGIN CODE REMAINS UNCHANGED
                                 });
@@ -363,7 +335,7 @@ class LoginScreen extends StatelessWidget {
                       const SizedBox(height: 40),
 
                       /// TERMS
-                     /* Text.rich(
+                      /* Text.rich(
                         textAlign: TextAlign.center,
                         TextSpan(
                           text:

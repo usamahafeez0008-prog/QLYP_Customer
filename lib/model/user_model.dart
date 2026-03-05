@@ -14,6 +14,7 @@ class UserModel {
   String? walletAmount;
   bool? isActive;
   Timestamp? createdAt;
+  String? password;
 
   UserModel(
       {this.fullName,
@@ -28,7 +29,8 @@ class UserModel {
       this.reviewsSum,
       this.isActive,
       this.walletAmount,
-      this.createdAt});
+      this.createdAt,
+      this.password});
 
   UserModel.fromJson(Map<String, dynamic> json) {
     fullName = json['fullName'];
@@ -44,6 +46,7 @@ class UserModel {
     isActive = json['isActive'];
     walletAmount = json['walletAmount'] ?? "0.0";
     createdAt = json['createdAt'];
+    password = json['password'];
   }
 
   Map<String, dynamic> toJson() {
@@ -61,6 +64,7 @@ class UserModel {
     data['isActive'] = isActive;
     data['walletAmount'] = walletAmount;
     data['createdAt'] = createdAt;
+    data['password'] = password;
     return data;
   }
 }

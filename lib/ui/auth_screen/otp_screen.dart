@@ -6,6 +6,7 @@ import 'package:customer/themes/app_colors.dart';
 import 'package:customer/ui/auth_screen/information_screen.dart';
 import 'package:customer/ui/dashboard_screen.dart';
 import 'package:customer/utils/DarkThemeProvider.dart';
+import 'package:customer/utils/Preferences.dart';
 import 'package:customer/utils/fire_store_utils.dart';
 
 import 'package:firebase_auth/firebase_auth.dart';
@@ -20,16 +21,13 @@ class OtpScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
     final themeChange = Provider.of<DarkThemeProvider>(context);
 
     return GetX<OtpController>(
       init: OtpController(),
       builder: (controller) {
-
         return Scaffold(
           backgroundColor: Colors.white,
-
           appBar: AppBar(
             backgroundColor: Colors.white,
             elevation: 0,
@@ -39,15 +37,12 @@ class OtpScreen extends StatelessWidget {
               onPressed: () => Get.back(),
             ),
           ),
-
           body: SafeArea(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 24),
-
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-
                   const SizedBox(height: 10),
 
                   /// Illustration
@@ -84,11 +79,10 @@ class OtpScreen extends StatelessWidget {
                           fontWeight: FontWeight.w300,
                         ),
                       ),
-
                       const SizedBox(width: 2),
-
                       Text(
-                        controller.countryCode.value + controller.phoneNumber.value,
+                        controller.countryCode.value +
+                            controller.phoneNumber.value,
                         textAlign: TextAlign.center,
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 14,
@@ -104,7 +98,6 @@ class OtpScreen extends StatelessWidget {
                   /// OTP BOX
                   LayoutBuilder(
                     builder: (context, constraints) {
-
                       const int len = 6;
                       const double gap = 10;
 
@@ -122,30 +115,24 @@ class OtpScreen extends StatelessWidget {
                         enableActiveFill: true,
                         cursorColor: const Color(0xff0C1A30),
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        separatorBuilder: (_, __) =>
-                        const SizedBox(width: gap),
-
+                        separatorBuilder: (_, __) => const SizedBox(width: gap),
                         textStyle: GoogleFonts.poppins(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                           color: const Color(0xff0C1A30),
                         ),
-
                         pinTheme: PinTheme(
                           fieldHeight: fieldW,
                           fieldWidth: fieldW,
                           shape: PinCodeFieldShape.box,
                           borderRadius: BorderRadius.circular(10),
-
                           activeColor: const Color(0xff000000),
                           selectedColor: const Color(0xff0C1A30),
                           inactiveColor: const Color(0xffE2E5EA),
-
                           activeFillColor: Colors.white,
                           selectedFillColor: Colors.white,
                           inactiveFillColor: Colors.white,
                         ),
-
                         onChanged: (_) {},
                         onCompleted: (_) {},
                       );
@@ -158,10 +145,8 @@ class OtpScreen extends StatelessWidget {
                   SizedBox(
                     width: double.infinity,
                     height: 52,
-
                     child: ElevatedButton(
                       onPressed: () async {
-
                         /// CUSTOMER LOGIC — UNCHANGED
                         if (controller.otpController.value.text.length != 6) {
                           ShowToastDialog.showToast(
@@ -172,13 +157,10 @@ class OtpScreen extends StatelessWidget {
                         ShowToastDialog.showLoader("Verify OTP".tr);
 
                         try {
-
                           PhoneAuthCredential credential =
-                          PhoneAuthProvider.credential(
-                            verificationId:
-                            controller.verificationId.value,
-                            smsCode:
-                            controller.otpController.value.text,
+                              PhoneAuthProvider.credential(
+                            verificationId: controller.verificationId.value,
+                            smsCode: controller.otpController.value.text,
                           );
 
                           final value = await FirebaseAuth.instance
@@ -187,7 +169,6 @@ class OtpScreen extends StatelessWidget {
                           ShowToastDialog.closeLoader();
 
                           if (value.additionalUserInfo!.isNewUser) {
-
                             UserModel userModel = UserModel();
 
                             userModel.id = value.user!.uid;
@@ -195,26 +176,20 @@ class OtpScreen extends StatelessWidget {
                                 controller.countryCode.value;
                             userModel.phoneNumber =
                                 controller.phoneNumber.value;
-                            userModel.loginType =
-                                Constant.phoneLoginType;
+                            userModel.loginType = Constant.phoneLoginType;
 
                             Get.to(const InformationScreen(),
                                 arguments: {"userModel": userModel});
-
                           } else {
-
-                            final role =
-                            await FireStoreUtils
-                                .userExitCustomerOrDriverRole(
-                                value.user!.uid);
+                            final role = await FireStoreUtils
+                                .userExitCustomerOrDriverRole(value.user!.uid);
 
                             if (role == Constant.currentUserType) {
-
                               Get.offAll(const InformationScreen());
-
                             } else {
-
                               await FirebaseAuth.instance.signOut();
+                              await Preferences.clearKeyData(
+                                  Preferences.userId);
 
                               ShowToastDialog.showToast(
                                 "This mobile number is already registered with a different role."
@@ -222,16 +197,12 @@ class OtpScreen extends StatelessWidget {
                               );
                             }
                           }
-
                         } catch (e) {
-
                           ShowToastDialog.closeLoader();
 
-                          ShowToastDialog.showToast(
-                              "Code is Invalid".tr);
+                          ShowToastDialog.showToast("Code is Invalid".tr);
                         }
                       },
-
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xff12223b),
                         shape: RoundedRectangleBorder(
@@ -239,7 +210,6 @@ class OtpScreen extends StatelessWidget {
                         ),
                         elevation: 0,
                       ),
-
                       child: Text(
                         "Verify".tr,
                         style: GoogleFonts.plusJakartaSans(
@@ -261,7 +231,6 @@ class OtpScreen extends StatelessWidget {
     );
   }
 }
-
 
 /*
 import 'package:customer/constant/constant.dart';

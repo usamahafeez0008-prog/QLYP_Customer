@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:customer/constant/show_toast_dialog.dart';
+
 import 'package:customer/themes/app_colors.dart';
 import 'package:customer/themes/button_them.dart';
 import 'package:customer/utils/DarkThemeProvider.dart';
@@ -24,389 +26,234 @@ class MapPickerPage extends StatelessWidget {
     final isDark = themeChange.getThem();
 
     return Container(
-      // ✅ QLYP background (doesn't affect functionality)
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            AppColors.qlypOffWhite.withOpacity(0.98),
-            AppColors.qlypCharcoal,
-            AppColors.qlypCharcoal.withOpacity(0.95),
-          ],
-          stops: const [0.0, 0.4, 1.0],
-        ),
-      ),
+      color: AppColors.background,
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        extendBody: true,
         body: Stack(
           children: [
-            // ✅ Map (unchanged functionality)
+            // Map Layer
             Obx(
-                  () => FlutterMap(
+              () => FlutterMap(
                 mapController: controller.mapController,
                 options: MapOptions(
-                  initialCenter:
-                  controller.pickedPlace.value?.coordinates ?? LatLng(20.5937, 78.9629),
+                  initialCenter: controller.pickedPlace.value?.coordinates ??
+                      LatLng(31.511, 74.314),
                   initialZoom: 13,
                   onTap: (tapPos, latlng) {
                     controller.addLatLngOnly(latlng);
-                    controller.mapController.move(latlng, controller.mapController.camera.zoom);
+                    controller.mapController
+                        .move(latlng, controller.mapController.camera.zoom);
                   },
                 ),
                 children: [
                   TileLayer(
-                    urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    urlTemplate:
+                        'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
                     subdomains: const ['a', 'b', 'c'],
-                    userAgentPackageName: Platform.isAndroid
-                        ? 'com.goride.customer'
-                        : 'com.goride.customer',
+                    userAgentPackageName: 'com.goride.customer',
                   ),
                   MarkerLayer(
                     markers: controller.pickedPlace.value != null
                         ? [
-                      Marker(
-                        point: controller.pickedPlace.value!.coordinates,
-                        width: 60,
-                        height: 60,
-                        child: SvgPicture.asset(
-                          'assets/icons/ic_destination.svg',
-                          width: 60,
-                          height: 60,
-                          fit: BoxFit.fill,
-                          color: AppColors.qlypPrimaryFreshGreen,
-                        ),
-                      ),
-                    ]
+                            Marker(
+                              point: controller.pickedPlace.value!.coordinates,
+                              width: 50,
+                              height: 50,
+                              child: Icon(
+                                Icons.location_on,
+                                color: AppColors.qlypDeepNavy,
+                                size: 50,
+                              ),
+                            ),
+                          ]
                         : [],
                   ),
                 ],
               ),
             ),
 
-            // ✅ top blobs (visual only)
+            // Top Search Bar
             Positioned(
-              top: -90,
-              right: -60,
-              child: Container(
-                width: 260,
-                height: 260,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      AppColors.qlypDeepNavy.withOpacity(0.22),
-                      AppColors.qlypDeepNavy.withOpacity(0.08),
-                      Colors.transparent,
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              bottom: -110,
-              left: -70,
-              child: Container(
-                width: 260,
-                height: 260,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      AppColors.qlypPrimaryFreshGreen.withOpacity(0.14),
-                      AppColors.qlypPrimaryFreshGreen.withOpacity(0.05),
-                      Colors.transparent,
-                    ],
-                  ),
-                ),
-              ),
-            ),
-
-            // ✅ Top bar + search (same logic)
-            Positioned(
-              top: 18,
+              top: MediaQuery.of(context).padding.top + 10,
               left: 16,
               right: 16,
-              child: SafeArea(
-                bottom: false,
-                child: Column(
-                  children: [
-                    // Back button (no drawer logic touched)
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Container(
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Container(
                         decoration: BoxDecoration(
-                          color: AppColors.qlypCharcoal.withOpacity(0.55),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: AppColors.qlypPrimaryFreshGreen.withOpacity(0.10),
-                          ),
+                          color: Colors.white,
+                          shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.25),
-                              blurRadius: 18,
-                              offset: const Offset(0, 10),
-                            ),
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 10)
                           ],
                         ),
                         child: IconButton(
                           onPressed: () => Get.back(),
-                          icon: Icon(
-                            Icons.arrow_back_rounded,
-                            color: AppColors.qlypPrimaryFreshGreen.withOpacity(0.9),
+                          icon: Icon(Icons.arrow_back,
+                              color: AppColors.qlypDeepNavy),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(30),
+                            boxShadow: [
+                              BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 10)
+                            ],
+                          ),
+                          child: TextField(
+                            controller: searchController,
+                            cursorColor: AppColors.qlypDeepNavy,
+                            decoration: InputDecoration(
+                              hintText: 'Search location...'.tr,
+                              hintStyle: GoogleFonts.poppins(
+                                  color: Colors.grey, fontSize: 14),
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 20, vertical: 15),
+                              border: InputBorder.none,
+                              suffixIcon: Icon(Icons.search,
+                                  color: AppColors.qlypDeepNavy),
+                            ),
+                            onChanged: controller.searchPlace,
                           ),
                         ),
                       ),
-                    ),
+                    ],
+                  ),
 
-                    const SizedBox(height: 10),
+                  // Search Results
+                  Obx(() {
+                    if (controller.searchResults.isEmpty)
+                      return const SizedBox.shrink();
 
-                    // Search field (functionality unchanged)
-                    Container(
+                    return Container(
+                      margin: const EdgeInsets.only(top: 8),
+                      constraints: const BoxConstraints(maxHeight: 300),
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(18),
-                        color: AppColors.qlypCharcoal.withOpacity(0.55),
-                        border: Border.all(
-                          color: AppColors.qlypPrimaryFreshGreen.withOpacity(0.12),
-                          width: 1.2,
-                        ),
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.25),
-                            blurRadius: 18,
-                            offset: const Offset(0, 10),
-                          ),
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 10)
                         ],
                       ),
-                      child: Theme(
-                        data: Theme.of(context).copyWith(
-                          textSelectionTheme: TextSelectionThemeData(
-                            cursorColor: AppColors.qlypSecondaryWarmSand,
-                            selectionColor: AppColors.qlypSecondaryWarmSand.withOpacity(0.25),
-                            selectionHandleColor: AppColors.qlypSecondaryWarmSand,
-                          ),
-                        ),
-                        child: TextField(
-                          controller: searchController,
-                          cursorColor: AppColors.qlypSecondaryWarmSand,
-                          style: TextStyle(
-                            color: AppColors.qlypPrimaryFreshGreen.withOpacity(0.95),
-                          ),
-                          decoration: InputDecoration(
-                            filled: true,
-                            fillColor: Colors.transparent,
-                            hintText: 'Search location...'.tr,
-                            hintStyle: TextStyle(
-                              color: AppColors.qlypPrimaryFreshGreen.withOpacity(0.45),
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        padding: EdgeInsets.zero,
+                        itemCount: controller.searchResults.length,
+                        itemBuilder: (context, index) {
+                          final place = controller.searchResults[index];
+                          return ListTile(
+                            leading: Icon(Icons.location_on_outlined,
+                                color: AppColors.qlypDeepNavy),
+                            title: Text(
+                              place['display_name'],
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.poppins(fontSize: 13),
                             ),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                            border: InputBorder.none,
-                            prefixIcon: Icon(
-                              Icons.search,
-                              color: AppColors.qlypSecondaryWarmSand,
-                            ),
-                          ),
-                          onChanged: controller.searchPlace,
-                        ),
+                            onTap: () {
+                              controller.selectSearchResult(place);
+                              final lat = double.parse(place['lat']);
+                              final lon = double.parse(place['lon']);
+                              final pos = LatLng(lat, lon);
+                              controller.mapController.move(pos, 15);
+                              searchController.text = place['display_name'];
+                              controller.searchResults.clear();
+                              FocusScope.of(context).unfocus();
+                            },
+                          );
+                        },
                       ),
-                    ),
-
-                    // Search results (same logic)
-                    Obx(() {
-                      if (controller.searchResults.isEmpty) return const SizedBox.shrink();
-
-                      return Container(
-                        margin: const EdgeInsets.only(top: 8),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(18),
-                          color: AppColors.qlypCharcoal.withOpacity(0.72),
-                          border: Border.all(
-                            color: AppColors.qlypPrimaryFreshGreen.withOpacity(0.10),
-                          ),
-                        ),
-                        child: ListView.builder(
-                          shrinkWrap: true,
-                          itemCount: controller.searchResults.length,
-                          itemBuilder: (context, index) {
-                            final place = controller.searchResults[index];
-                            return ListTile(
-                              title: Text(
-                                place['display_name'],
-                                style: TextStyle(
-                                  color: AppColors.qlypPrimaryFreshGreen.withOpacity(0.9),
-                                  fontSize: 13,
-                                ),
-                              ),
-                              onTap: () {
-                                controller.selectSearchResult(place);
-                                final lat = double.parse(place['lat']);
-                                final lon = double.parse(place['lon']);
-                                final pos = LatLng(lat, lon);
-                                controller.mapController.move(pos, 15);
-                                searchController.text = place['display_name'];
-                              },
-                            );
-                          },
-                        ),
-                      );
-                    }),
-                  ],
-                ),
+                    );
+                  }),
+                ],
               ),
             ),
           ],
         ),
-
-        // ✅ Bottom sheet-like bar (same confirm + delete logic)
         bottomNavigationBar: Obx(() {
-          return SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(22),
-                  color: AppColors.qlypCharcoal.withOpacity(0.55),
-                  border: Border.all(
-                    color: AppColors.qlypPrimaryFreshGreen.withOpacity(0.10),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.30),
-                      blurRadius: 30,
-                      offset: const Offset(0, 18),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
+          return Container(
+            padding: EdgeInsets.fromLTRB(
+                20, 20, 20, MediaQuery.of(context).padding.bottom + 20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(30)),
+              boxShadow: [
+                BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10)
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      controller.pickedPlace.value != null
-                          ? "Picked Location:".tr
-                          : "No Location Picked".tr,
-                      style: TextStyle(
-                        color: AppColors.qlypPrimaryFreshGreen.withOpacity(0.95),
-                        fontWeight: FontWeight.w700,
+                      "Picked Location".tr,
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: AppColors.qlypDeepNavy,
                       ),
                     ),
-                    const SizedBox(height: 6),
                     if (controller.pickedPlace.value != null)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 2.0),
-                        child: Text(
-                          "${controller.pickedPlace.value!.address}\n(${controller.pickedPlace.value!.coordinates.latitude.toStringAsFixed(5)}, ${controller.pickedPlace.value!.coordinates.longitude.toStringAsFixed(5)})",
-                          style: TextStyle(
-                            fontSize: 12.5,
-                            color: AppColors.qlypPrimaryFreshGreen.withOpacity(0.70),
-                          ),
-                        ),
+                      IconButton(
+                        onPressed: controller.clearAll,
+                        icon:
+                            const Icon(Icons.delete_outline, color: Colors.red),
                       ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: SizedBox(
-                            width: double.infinity,
-                            height: 56,
-                            child: Material(
-                              color: Colors.transparent,
-                              borderRadius: BorderRadius.circular(18),
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(18),
-                                onTap: () async {
-                                  final selected = controller.pickedPlace.value;
-                                  if (selected != null) {
-                                    Get.back(result: selected); // ✅ SAME LOGIC
-                                    // ignore: avoid_print
-                                    print("Selected location: $selected");
-                                  }
-                                },
-                                child: Ink(
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(18),
-                                    gradient: LinearGradient(
-                                      begin: Alignment.centerLeft,
-                                      end: Alignment.centerRight,
-                                      colors: [
-                                        AppColors.qlypSecondaryWarmSand,
-                                        AppColors.qlypPrimarySunYellow,
-                                      ],
-                                    ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: AppColors.qlypPrimarySunYellow.withOpacity(0.45),
-                                        blurRadius: 18,
-                                        offset: const Offset(0, 8),
-                                      ),
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.35),
-                                        blurRadius: 24,
-                                        offset: const Offset(0, 14),
-                                      ),
-                                    ],
-                                    border: Border.all(
-                                      color: AppColors.qlypPrimaryFreshGreen.withOpacity(0.10),
-                                      width: 1.2,
-                                    ),
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      "Confirm Location".tr,
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w800,
-                                        color: AppColors.qlypCharcoal,
-                                        letterSpacing: -0.2,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-
-
-                          /*ButtonThem.buildButton(
-                            context,
-                            title: "Confirm Location".tr,
-                            onPress: () async {
-                              final selected = controller.pickedPlace.value;
-                              if (selected != null) {
-                                Get.back(result: selected); // ✅ Return the selected place
-                                // ignore: avoid_print
-                                print("Selected location: $selected");
-                              }
-                            },
-                          ),*/
-                        ),
-                        const SizedBox(width: 10),
-
-                        // Delete button (same function)
-                        Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(14),
-                            color: AppColors.qlypCharcoal.withOpacity(0.55),
-                            border: Border.all(
-                              color: AppColors.qlypDeepNavy.withOpacity(0.35),
-                            ),
-                          ),
-                          child: IconButton(
-                            icon: Icon(
-                              Icons.delete_forever_rounded,
-                              color: AppColors.qlypDeepNavy,
-                            ),
-                            onPressed: controller.clearAll,
-                          ),
-                        ),
-                      ],
-                    ),
                   ],
                 ),
-              ),
+                if (controller.pickedPlace.value != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    controller.pickedPlace.value!.address,
+                    style:
+                        GoogleFonts.poppins(color: Colors.grey, fontSize: 13),
+                  ),
+                ],
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.qlypDeepNavy,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16)),
+                      elevation: 0,
+                    ),
+                    onPressed: () {
+                      final selected = controller.pickedPlace.value;
+                      if (selected != null) {
+                        Get.back(result: selected);
+                      } else {
+                        ShowToastDialog.showToast("Please pick a location");
+                      }
+                    },
+                    child: Text(
+                      "Confirm Location".tr,
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           );
         }),
@@ -414,193 +261,3 @@ class MapPickerPage extends StatelessWidget {
     );
   }
 }
-
-
-
-/*
-import 'dart:io';
-
-import 'package:customer/themes/app_colors.dart';
-import 'package:customer/themes/button_them.dart';
-import 'package:customer/utils/DarkThemeProvider.dart';
-import 'package:customer/widget/osm_map/map_controller.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
-import 'package:flutter_svg/svg.dart';
-import 'package:get/get.dart';
-import 'package:latlong2/latlong.dart';
-import 'package:provider/provider.dart';
-
-class MapPickerPage extends StatelessWidget {
-  final OSMMapController controller = Get.put(OSMMapController());
-  final TextEditingController searchController = TextEditingController();
-
-  MapPickerPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final themeChange = Provider.of<DarkThemeProvider>(context);
-    return Scaffold(
-      body: Stack(
-        children: [
-          Obx(
-            () => FlutterMap(
-              mapController: controller.mapController,
-              options: MapOptions(
-                initialCenter: controller.pickedPlace.value?.coordinates ?? LatLng(20.5937, 78.9629), // Default India center
-                initialZoom: 13,
-                onTap: (tapPos, latlng) {
-                  controller.addLatLngOnly(latlng);
-                  controller.mapController.move(latlng, controller.mapController.camera.zoom);
-                },
-              ),
-              children: [
-                TileLayer(
-                  urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-                  subdomains: const ['a', 'b', 'c'],
-                  userAgentPackageName: Platform.isAndroid ? 'com.goride.customer' : 'com.goride.customer',
-                ),
-                MarkerLayer(
-                  markers: controller.pickedPlace.value != null
-                      ? [
-                          Marker(
-                              point: controller.pickedPlace.value!.coordinates,
-                              width: 60,
-                              height: 60,
-                              child: SvgPicture.asset(
-                                'assets/icons/ic_destination.svg',
-                                width: 60,
-                                height: 60,
-                                fit: BoxFit.fill,
-                                color: AppColors.darkBackground,
-                              )),
-                        ]
-                      : [],
-                ),
-              ],
-            ),
-          ),
-          Positioned(
-            top: 32,
-            left: 16,
-            right: 16,
-            child: Column(
-              children: [
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: IconButton(
-                    onPressed: () {
-                      Get.back();
-                    },
-                    icon: Icon(
-                      Icons.arrow_back,
-                      color: AppColors.darkContainerBackground,
-                    ),
-                  ),
-                ),
-                Material(
-                  elevation: 4,
-                  borderRadius: BorderRadius.circular(8),
-                  child: TextField(
-                    controller: searchController,
-                    cursorColor: themeChange.getThem() ? AppColors.darksecondprimary : AppColors.lightsecondprimary,
-                    decoration: InputDecoration(
-                      filled: true,
-                      fillColor: themeChange.getThem() ? AppColors.darkContainerBackground : AppColors.containerBackground,
-                      hintText: 'Search location...'.tr,
-                      contentPadding: EdgeInsets.all(12),
-                      border: InputBorder.none,
-                      prefixIcon: Icon(Icons.search, color: themeChange.getThem() ? AppColors.darksecondprimary : AppColors.lightsecondprimary),
-                    ),
-                    onChanged: controller.searchPlace,
-                  ),
-                ),
-                Obx(() {
-                  if (controller.searchResults.isEmpty) return const SizedBox.shrink();
-
-                  return Container(
-                    margin: const EdgeInsets.only(top: 4),
-                    decoration: BoxDecoration(
-                      color: themeChange.getThem() ? AppColors.darkContainerBackground : AppColors.containerBackground,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: ListView.builder(
-                      shrinkWrap: true,
-                      itemCount: controller.searchResults.length,
-                      itemBuilder: (context, index) {
-                        final place = controller.searchResults[index];
-                        return ListTile(
-                          title: Text(place['display_name']),
-                          onTap: () {
-                            controller.selectSearchResult(place);
-                            final lat = double.parse(place['lat']);
-                            final lon = double.parse(place['lon']);
-                            final pos = LatLng(lat, lon);
-                            controller.mapController.move(pos, 15);
-                            searchController.text = place['display_name'];
-                          },
-                        );
-                      },
-                    ),
-                  );
-                }),
-              ],
-            ),
-          ),
-        ],
-      ),
-      bottomNavigationBar: Obx(() {
-        return Container(
-          padding: const EdgeInsets.all(16),
-          color: themeChange.getThem() ? AppColors.darkBackground : AppColors.background,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                controller.pickedPlace.value != null ? "Picked Location:".tr : "No Location Picked".tr,
-                style: TextStyle(
-                  color: themeChange.getThem() ? AppColors.background : AppColors.darkBackground,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 4),
-              if (controller.pickedPlace.value != null)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 2.0),
-                  child: Text(
-                    "${controller.pickedPlace.value!.address}\n(${controller.pickedPlace.value!.coordinates.latitude.toStringAsFixed(5)}, ${controller.pickedPlace.value!.coordinates.longitude.toStringAsFixed(5)})",
-                    style: const TextStyle(fontSize: 13),
-                  ),
-                ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: ButtonThem.buildButton(
-                      context,
-                      title: "Confirm Location".tr,
-                      onPress: () async {
-                        final selected = controller.pickedPlace.value;
-                        if (selected != null) {
-                          Get.back(result: selected); // ✅ Return the selected place
-                          print("Selected location: $selected");
-                        }
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  IconButton(
-                    icon: const Icon(Icons.delete_forever, color: Colors.red),
-                    onPressed: controller.clearAll,
-                  )
-                ],
-              ),
-            ],
-          ),
-        );
-      }),
-    );
-  }
-}
-*/

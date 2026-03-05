@@ -38,7 +38,7 @@ class Constant {
   static const String phoneLoginType = "phone";
   static const String googleLoginType = "google";
   static const String appleLoginType = "apple";
-  static String mapAPIKey = "";
+  static String mapAPIKey = "AIzaSyB_OGDt0ul9dwtsOlnXDzWZ7qV1TBVECnU";
   static String senderId = '';
   static String jsonNotificationFileURL = '';
   static String radius = "10";

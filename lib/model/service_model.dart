@@ -7,21 +7,35 @@ class ServiceModel {
   bool? offerRate;
   bool? intercityType;
   String? id;
+  String? mainServiceID;
   List<LanguageName>? title;
   String? markerIcon;
   AdminCommission? adminCommission;
   List<Price>? prices;
 
-  ServiceModel({this.image, this.enable, this.intercityType, this.offerRate, this.id, this.markerIcon, this.title, this.adminCommission, this.prices});
+  ServiceModel(
+      {this.image,
+      this.enable,
+      this.intercityType,
+      this.offerRate,
+      this.id,
+      this.mainServiceID,
+      this.markerIcon,
+      this.title,
+      this.adminCommission,
+      this.prices});
 
   ServiceModel.fromJson(Map<String, dynamic> json) {
     image = json['image'];
     enable = json['enable'];
     offerRate = json['offerRate'];
     id = json['id'];
+    mainServiceID = json['mainServiceID'];
     markerIcon = json['markerIcon'];
     intercityType = json['intercityType'];
-    adminCommission = json['adminCommission'] != null ? AdminCommission.fromJson(json['adminCommission']) : AdminCommission(isEnabled: true, amount: "", type: "");
+    adminCommission = json['adminCommission'] != null
+        ? AdminCommission.fromJson(json['adminCommission'])
+        : AdminCommission(isEnabled: true, amount: "", type: "");
     if (json['title'] != null) {
       title = <LanguageName>[];
       json['title'].forEach((v) {
@@ -41,6 +55,7 @@ class ServiceModel {
     data['enable'] = enable;
     data['offerRate'] = offerRate;
     data['id'] = id;
+    data['mainServiceID'] = mainServiceID;
     data['markerIcon'] = markerIcon;
     data['title'] = title;
     data['intercityType'] = intercityType;

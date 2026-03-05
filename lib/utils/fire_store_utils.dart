@@ -33,6 +33,7 @@ import 'package:customer/model/sos_model.dart';
 import 'package:customer/model/tax_model.dart';
 import 'package:customer/model/user_model.dart';
 import 'package:customer/model/wallet_transaction_model.dart';
+import 'package:customer/model/main_service_model.dart';
 import 'package:customer/model/zone_model.dart';
 import 'package:customer/themes/app_colors.dart';
 import 'package:customer/widget/geoflutterfire/src/geoflutterfire.dart';
@@ -839,6 +840,25 @@ class FireStoreUtils {
     return serviceList;
   }
 
+  static Future<List<ServiceModel>> getServicesByMainServiceId(
+      String mainServiceId) async {
+    List<ServiceModel> serviceList = [];
+    await fireStore
+        .collection(CollectionName.service)
+        .where('mainServiceID', isEqualTo: mainServiceId)
+        .where('enable', isEqualTo: true)
+        .get()
+        .then((value) {
+      for (var element in value.docs) {
+        ServiceModel documentModel = ServiceModel.fromJson(element.data());
+        serviceList.add(documentModel);
+      }
+    }).catchError((error) {
+      log(error.toString());
+    });
+    return serviceList;
+  }
+
   static Future<List<BannerModel>> getBanner() async {
     List<BannerModel> bannerList = [];
     await fireStore
@@ -1487,6 +1507,27 @@ class FireStoreUtils {
     return isFirst;
   }
 
+  static Future<bool> checkActiveRide() async {
+    bool isActive = false;
+    await fireStore
+        .collection(CollectionName.orders)
+        .where('userId', isEqualTo: FireStoreUtils.getCurrentUid())
+        .where('status', whereIn: [
+          Constant.ridePlaced,
+          Constant.rideActive,
+          Constant.rideInProgress,
+          Constant.rideHold,
+          Constant.rideHoldAccepted,
+        ])
+        .get()
+        .then((value) {
+          if (value.size >= 1) {
+            isActive = true;
+          }
+        });
+    return isActive;
+  }
+
   static Future<bool> paymentStatusCheckIntercity() async {
     ShowToastDialog.showLoader("Please wait");
     bool isFirst = false;
@@ -1701,5 +1742,19 @@ class FireStoreUtils {
     } catch (e) {
       print("🔥 Exception while deleting user: $e");
     }
+  }
+
+  static Future<List<MainServiceModel>> getMainServices() async {
+    List<MainServiceModel> mainServiceList = [];
+    await fireStore.collection(CollectionName.mainServices).get().then((value) {
+      for (var element in value.docs) {
+        MainServiceModel documentModel =
+            MainServiceModel.fromJson(element.data());
+        mainServiceList.add(documentModel);
+      }
+    }).catchError((error) {
+      log(error.toString());
+    });
+    return mainServiceList;
   }
 }

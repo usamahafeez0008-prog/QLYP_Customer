@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:customer/constant/constant.dart';
 import 'package:customer/constant/show_toast_dialog.dart';
 import 'package:customer/controller/dash_board_controller.dart';
@@ -7,6 +8,7 @@ import 'package:customer/model/banner_model.dart';
 import 'package:customer/model/contact_model.dart';
 import 'package:customer/model/order/location_lat_lng.dart';
 import 'package:customer/model/payment_model.dart';
+import 'package:customer/model/main_service_model.dart';
 import 'package:customer/model/service_model.dart';
 import 'package:customer/model/user_model.dart';
 import 'package:customer/model/zone_model.dart';
@@ -18,14 +20,19 @@ import 'package:customer/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:get/get.dart';
+import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:http/http.dart' as http;
 
 class HomeController extends GetxController {
   DashBoardController dashboardController = Get.put(DashBoardController());
 
-  Rx<TextEditingController> sourceLocationController = TextEditingController().obs;
-  Rx<TextEditingController> destinationLocationController = TextEditingController().obs;
-  Rx<TextEditingController> offerYourRateController = TextEditingController().obs;
+  Rx<TextEditingController> sourceLocationController =
+      TextEditingController().obs;
+  Rx<TextEditingController> destinationLocationController =
+      TextEditingController().obs;
+  Rx<TextEditingController> offerYourRateController =
+      TextEditingController().obs;
   Rx<ServiceModel> selectedType = ServiceModel().obs;
 
   Rx<LocationLatLng> sourceLocationLAtLng = LocationLatLng().obs;
@@ -34,13 +41,26 @@ class HomeController extends GetxController {
   RxString currentLocation = "".obs;
   RxBool isLoading = true.obs;
   RxList<ServiceModel> serviceList = <ServiceModel>[].obs;
+  RxList<MainServiceModel> mainServiceList = <MainServiceModel>[].obs;
   RxList bannerList = <BannerModel>[].obs;
   RxList<ZoneModel> zoneList = <ZoneModel>[].obs;
   Rx<ZoneModel> selectedZone = ZoneModel().obs;
   Rx<UserModel> userModel = UserModel().obs;
   RxBool isAcSelected = false.obs;
   RxDouble extraDistance = 0.0.obs;
-  final PageController pageController = PageController(viewportFraction: 0.96, keepPage: true);
+  RxString selectedMainServiceId = "".obs;
+  RxBool isServicesLoading = false.obs;
+  GoogleMapController? mapController;
+  final PageController pageController =
+      PageController(viewportFraction: 0.96, keepPage: true);
+
+  // Map display — markers and route polyline
+  RxSet<Marker> markers = <Marker>{}.obs;
+  RxSet<Polyline> polylines = <Polyline>{}.obs;
+
+  // These getters force GoogleMap to receive new Set instances
+  Set<Marker> get markerSet => Set<Marker>.from(markers);
+  Set<Polyline> get polylineSet => Set<Polyline>.from(polylines);
 
   var colors = [
     AppColors.serviceColor1,
@@ -94,10 +114,12 @@ class HomeController extends GetxController {
   }
 
   Future<void> getServiceType() async {
-    await FireStoreUtils.getService().then((value) {
-      serviceList.value = value;
-      if (serviceList.isNotEmpty) {
-        selectedType.value = serviceList.first;
+    await FireStoreUtils.getMainServices().then((value) {
+      mainServiceList.value = value;
+      if (mainServiceList.isNotEmpty) {
+        selectedServiceCategory.value = mainServiceList.first.serviceName ?? "";
+        selectedMainServiceId.value = mainServiceList.first.mainServiceID ?? "";
+        getServices(selectedMainServiceId.value);
       }
     });
 
@@ -112,7 +134,8 @@ class HomeController extends GetxController {
     });
 
     String token = await NotificationService.getToken();
-    await FireStoreUtils.getUserProfile(FireStoreUtils.getCurrentUid()).then((value) {
+    await FireStoreUtils.getUserProfile(FireStoreUtils.getCurrentUid())
+        .then((value) {
       userModel.value = value!;
       userModel.value.fcmToken = token;
       FireStoreUtils.updateUser(userModel.value);
@@ -163,19 +186,26 @@ class HomeController extends GetxController {
 
   Future<void> calculateDurationAndDistance() async {
     if (Constant.selectedMapType == 'osm') {
-      if (sourceLocationLAtLng.value.latitude != null && destinationLocationLAtLng.value.latitude != null) {
+      if (sourceLocationLAtLng.value.latitude != null &&
+          destinationLocationLAtLng.value.latitude != null) {
         ShowToastDialog.showLoader("Please wait");
         await Constant.getDurationOsmDistance(
-                LatLng(sourceLocationLAtLng.value.latitude!, sourceLocationLAtLng.value.longitude!), LatLng(destinationLocationLAtLng.value.latitude!, destinationLocationLAtLng.value.longitude!))
+                LatLng(sourceLocationLAtLng.value.latitude!,
+                    sourceLocationLAtLng.value.longitude!),
+                LatLng(destinationLocationLAtLng.value.latitude!,
+                    destinationLocationLAtLng.value.longitude!))
             .then((value) {
           if (value != {} && value.isNotEmpty) {
             int hours = value['routes'].first['duration'] ~/ 3600;
-            int minutes = ((value['routes'].first['duration'] % 3600) / 60).round();
+            int minutes =
+                ((value['routes'].first['duration'] % 3600) / 60).round();
             duration.value = '$hours hours $minutes minutes'.trim();
             if (Constant.distanceType == "Km") {
-              distance.value = (value['routes'].first['distance'] / 1000).toString();
+              distance.value =
+                  (value['routes'].first['distance'] / 1000).toString();
             } else {
-              distance.value = (value['routes'].first['distance'] / 1609.34).toString();
+              distance.value =
+                  (value['routes'].first['distance'] / 1609.34).toString();
             }
           }
           update();
@@ -183,18 +213,29 @@ class HomeController extends GetxController {
       }
       ShowToastDialog.closeLoader();
     } else {
-      if (sourceLocationLAtLng.value.latitude != null && destinationLocationLAtLng.value.latitude != null) {
+      if (sourceLocationLAtLng.value.latitude != null &&
+          destinationLocationLAtLng.value.latitude != null) {
         ShowToastDialog.showLoader("Please wait");
         await Constant.getDurationDistance(
-                LatLng(sourceLocationLAtLng.value.latitude!, sourceLocationLAtLng.value.longitude!), LatLng(destinationLocationLAtLng.value.latitude!, destinationLocationLAtLng.value.longitude!))
+                LatLng(sourceLocationLAtLng.value.latitude!,
+                    sourceLocationLAtLng.value.longitude!),
+                LatLng(destinationLocationLAtLng.value.latitude!,
+                    destinationLocationLAtLng.value.longitude!))
             .then((value) {
           if (value != null) {
-            duration.value = value.rows!.first.elements!.first.duration!.text.toString();
+            duration.value =
+                value.rows!.first.elements!.first.duration!.text.toString();
             print("duration :: 00 :: ${duration.value}");
             if (Constant.distanceType == "Km") {
-              distance.value = (value.rows!.first.elements!.first.distance!.value!.toInt() / 1000).toString();
+              distance.value =
+                  (value.rows!.first.elements!.first.distance!.value!.toInt() /
+                          1000)
+                      .toString();
             } else {
-              distance.value = (value.rows!.first.elements!.first.distance!.value!.toInt() / 1609.34).toString();
+              distance.value =
+                  (value.rows!.first.elements!.first.distance!.value!.toInt() /
+                          1609.34)
+                      .toString();
             }
           }
           update();
@@ -204,11 +245,203 @@ class HomeController extends GetxController {
     }
   }
 
+  /// Draws markers for source & destination and a straight-line polyline between them.
+  /// Camera animates to fit both points.
+
+  Future<void> drawRoute() async {
+    final srcLat = sourceLocationLAtLng.value.latitude;
+    final srcLng = sourceLocationLAtLng.value.longitude;
+
+    final dstLat = destinationLocationLAtLng.value.latitude;
+    final dstLng = destinationLocationLAtLng.value.longitude;
+
+    if (srcLat == null || srcLng == null || dstLat == null || dstLng == null) {
+      print("Route aborted: coordinates missing");
+      return;
+    }
+
+    final LatLng source = LatLng(srcLat, srcLng);
+    final LatLng destination = LatLng(dstLat, dstLng);
+
+    /// MARKERS
+    markers.value = {
+      Marker(
+        markerId: const MarkerId("source"),
+        position: source,
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+        infoWindow: const InfoWindow(title: 'Départ'),
+      ),
+      Marker(
+        markerId: const MarkerId("destination"),
+        position: destination,
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+        infoWindow: const InfoWindow(title: 'Destination'),
+      ),
+    };
+
+    List<LatLng> polylineCoordinates = [];
+
+    if (Constant.selectedMapType == 'osm') {
+      // OSRM Routing
+      final url = Uri.parse(
+        'https://router.project-osrm.org/route/v1/driving/${source.longitude},${source.latitude};${destination.longitude},${destination.latitude}?overview=full&geometries=polyline',
+      );
+
+      try {
+        final response = await http.get(url);
+        if (response.statusCode == 200) {
+          final decoded = json.decode(response.body);
+          if (decoded['routes'] != null && decoded['routes'].isNotEmpty) {
+            String encodedPolyline = decoded['routes'][0]['geometry'];
+            List<PointLatLng> result =
+                PolylinePoints.decodePolyline(encodedPolyline);
+            polylineCoordinates =
+                result.map((p) => LatLng(p.latitude, p.longitude)).toList();
+          }
+        }
+      } catch (e) {
+        print("OSRM Routing Error: $e");
+      }
+    } else {
+      // Google Maps Routing
+      PolylinePoints polylinePoints =
+          PolylinePoints(apiKey: Constant.mapAPIKey);
+      PolylineRequest polylineRequest = PolylineRequest(
+        origin: PointLatLng(srcLat, srcLng),
+        destination: PointLatLng(dstLat, dstLng),
+        mode: TravelMode.driving,
+      );
+
+      try {
+        PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
+          request: polylineRequest,
+        );
+        if (result.points.isNotEmpty) {
+          polylineCoordinates = result.points
+              .map((p) => LatLng(p.latitude, p.longitude))
+              .toList();
+        }
+      } catch (e) {
+        print("Google Routing Error: $e");
+      }
+    }
+
+    // Fallback to straight line if routing failed
+    if (polylineCoordinates.isEmpty) {
+      polylineCoordinates = [source, destination];
+    }
+
+    /// POLYLINE
+    polylines.assignAll({
+      Polyline(
+        polylineId: const PolylineId("route"),
+        points: polylineCoordinates,
+        width: 6,
+        color: AppColors.qlypDeepNavy,
+        geodesic: true,
+      )
+    });
+
+    /// CAMERA FIT
+    if (mapController != null) {
+      final bounds = LatLngBounds(
+        southwest: LatLng(
+          srcLat < dstLat ? srcLat : dstLat,
+          srcLng < dstLng ? srcLng : dstLng,
+        ),
+        northeast: LatLng(
+          srcLat > dstLat ? srcLat : dstLat,
+          srcLng > dstLng ? srcLng : dstLng,
+        ),
+      );
+
+      mapController!.animateCamera(
+        CameraUpdate.newLatLngBounds(bounds, 80),
+      );
+    }
+
+    update(); // important for GetBuilder
+  }
+/*
+  Future<void> drawRoute() async {
+    print('[drawRoute] called');
+    final srcLat = sourceLocationLAtLng.value.latitude;
+    final srcLng = sourceLocationLAtLng.value.longitude;
+    final dstLat = destinationLocationLAtLng.value.latitude;
+    final dstLng = destinationLocationLAtLng.value.longitude;
+
+    print(
+        '[drawRoute] srcLat=$srcLat srcLng=$srcLng dstLat=$dstLat dstLng=$dstLng');
+
+    // Only draw when both locations are set
+    if (srcLat == null || dstLat == null) {
+      print('[drawRoute] ABORTED — source or destination is null');
+      return;
+    }
+
+    final srcLatLng = LatLng(srcLat, srcLng!);
+    final dstLatLng = LatLng(dstLat, dstLng!);
+
+    // Place source (green) and destination (red) markers
+    print('[drawRoute] assigning markers...');
+    markers.assignAll({
+      Marker(
+        markerId: const MarkerId('source'),
+        position: srcLatLng,
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+        infoWindow: const InfoWindow(title: 'Départ'),
+      ),
+      Marker(
+        markerId: const MarkerId('destination'),
+        position: dstLatLng,
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+        infoWindow: const InfoWindow(title: 'Destination'),
+      ),
+    });
+    print('[drawRoute] markers count: ${markers.length}');
+
+    // Draw a direct line between source and destination
+    print('[drawRoute] assigning polylines...');
+    polylines.assignAll({
+      Polyline(
+        polylineId: const PolylineId('route'),
+        color: AppColors.qlypDeepNavy,
+        width: 4,
+        points: [srcLatLng, dstLatLng],
+        patterns: [PatternItem.dash(20), PatternItem.gap(10)],
+      ),
+    });
+    print('[drawRoute] polylines count: ${polylines.length}');
+
+    // Animate camera to show both markers
+    print(
+        '[drawRoute] mapController=${mapController != null ? "ready" : "NULL"}');
+    if (mapController != null) {
+      final bounds = LatLngBounds(
+        southwest: LatLng(
+          srcLat < dstLat ? srcLat : dstLat,
+          srcLng < dstLng ? srcLng : dstLng,
+        ),
+        northeast: LatLng(
+          srcLat > dstLat ? srcLat : dstLat,
+          srcLng > dstLng ? srcLng : dstLng,
+        ),
+      );
+      print('[drawRoute] animating camera to bounds: $bounds');
+      mapController!.animateCamera(
+        CameraUpdate.newLatLngBounds(bounds, 80),
+      );
+    }
+    print('[drawRoute] DONE');
+  }
+*/
+
   Future<void> calculateAmount() async {
     acCharge.value = selectedType.value.prices?.first.acCharge ?? '0.0';
     nonAcCharge.value = selectedType.value.prices?.first.nonAcCharge ?? '0.0';
     basicFare.value = selectedType.value.prices?.first.basicFare ?? '0.0';
-    basicFareCharge.value = selectedType.value.prices?.first.basicFareCharge ?? '0.0';
+    basicFareCharge.value =
+        selectedType.value.prices?.first.basicFareCharge ?? '0.0';
     isAcNonAc.value = selectedType.value.prices?.first.isAcNonAc ?? false;
     String formatTime(String? time) {
       if (time == null || !time.contains(":")) {
@@ -219,48 +452,69 @@ class HomeController extends GetxController {
       return "${parts[0].padLeft(2, '0')}:${parts[1].padLeft(2, '0')}";
     }
 
-    startNightTime = formatTime(selectedType.value.prices?.first.startNightTime);
+    startNightTime =
+        formatTime(selectedType.value.prices?.first.startNightTime);
     endNightTime = formatTime(selectedType.value.prices?.first.endNightTime);
 
     List<String> startParts = startNightTime!.split(':');
     List<String> endParts = endNightTime!.split(':');
 
-    startNightTimeString = DateTime(currentDate.year, currentDate.month, currentDate.day, int.parse(startParts[0]), int.parse(startParts[1]));
-    endNightTimeString = DateTime(currentDate.year, currentDate.month, currentDate.day, int.parse(endParts[0]), int.parse(endParts[1]));
+    startNightTimeString = DateTime(currentDate.year, currentDate.month,
+        currentDate.day, int.parse(startParts[0]), int.parse(startParts[1]));
+    endNightTimeString = DateTime(currentDate.year, currentDate.month,
+        currentDate.day, int.parse(endParts[0]), int.parse(endParts[1]));
 
     nightCharge.value = selectedType.value.prices?.first.nightCharge ?? '0.0';
-    if (sourceLocationLAtLng.value.latitude != null && destinationLocationLAtLng.value.latitude != null) {
+    if (sourceLocationLAtLng.value.latitude != null &&
+        destinationLocationLAtLng.value.latitude != null) {
       double durationValueInMinutes = convertToMinutes(duration.toString());
       if (double.parse(distance.value) <= double.parse(basicFare.value)) {
-        amount.value = ((double.parse(basicFareCharge.value.toString())) + (double.parse(durationValueInMinutes.toString()) * double.parse(selectedType.value.prices?.first.perMinuteCharge ?? '0.0')))
+        amount.value = ((double.parse(basicFareCharge.value.toString())) +
+                (double.parse(durationValueInMinutes.toString()) *
+                    double.parse(
+                        selectedType.value.prices?.first.perMinuteCharge ??
+                            '0.0')))
             .toStringAsFixed(Constant.currencyModel!.decimalDigits!);
 
         totalNightFare.value = double.parse(amount.value);
-        if (currentTime.isAfter(startNightTimeString) && currentTime.isBefore(endNightTimeString)) {
-          amount.value = (totalNightFare.value * double.parse(nightCharge.value.toString())).toStringAsFixed(2);
+        if (currentTime.isAfter(startNightTimeString) &&
+            currentTime.isBefore(endNightTimeString)) {
+          amount.value = (totalNightFare.value *
+                  double.parse(nightCharge.value.toString()))
+              .toStringAsFixed(2);
         }
       } else {
         double distanceValue = double.tryParse(distance.value) ?? 0.0;
         double basicFareValue = double.tryParse(basicFare.value) ?? 0.0;
         double extraDist = distanceValue - basicFareValue;
         extraDistance.value = extraDist;
-        double nonAcChargeValue = double.tryParse(nonAcCharge.value.toString()) ?? 0.0;
-        double acChargeValue = double.tryParse(acCharge.value.toString()) ?? 0.0;
+        double nonAcChargeValue =
+            double.tryParse(nonAcCharge.value.toString()) ?? 0.0;
+        double acChargeValue =
+            double.tryParse(acCharge.value.toString()) ?? 0.0;
         double perKmCharge = isAcNonAc.value == true
             ? isAcSelected.value == false
                 ? nonAcChargeValue
                 : acChargeValue
             : double.parse(selectedType.value.prices?.first.kmCharge ?? '0.0');
-        double perMinuteCharge = double.parse(selectedType.value.prices?.first.perMinuteCharge ?? '0.0');
-        double durationInMinutes = double.parse(durationValueInMinutes.toString());
-        double basicFareChargeValue = double.parse(basicFareCharge.value.toString());
-        totalAmount.value = (perKmCharge * extraDist) + (durationInMinutes * perMinuteCharge) + basicFareChargeValue;
+        double perMinuteCharge = double.parse(
+            selectedType.value.prices?.first.perMinuteCharge ?? '0.0');
+        double durationInMinutes =
+            double.parse(durationValueInMinutes.toString());
+        double basicFareChargeValue =
+            double.parse(basicFareCharge.value.toString());
+        totalAmount.value = (perKmCharge * extraDist) +
+            (durationInMinutes * perMinuteCharge) +
+            basicFareChargeValue;
 
         totalNightFare.value = totalAmount.value;
         amount.value = totalNightFare.value.toStringAsFixed(2);
 
-        if (currentTime.isAfter(startNightTimeString) && currentTime.isBefore(endNightTimeString)) {
-          amount.value = (totalNightFare.value * double.parse(nightCharge.value.toString())).toStringAsFixed(2);
+        if (currentTime.isAfter(startNightTimeString) &&
+            currentTime.isBefore(endNightTimeString)) {
+          amount.value = (totalNightFare.value *
+                  double.parse(nightCharge.value.toString()))
+              .toStringAsFixed(2);
         }
       }
       offerYourRateController.value.text = amount.value;
@@ -272,9 +526,9 @@ class HomeController extends GetxController {
 
   RxString selectedPaymentMethod = "".obs;
   final selectedServiceCategory = "Taxi".obs;
+  final personCount = 1.obs;
 
-
-  RxList airPortList = <AriPortModel>[].obs;
+  RxList<AriPortModel> airPortList = <AriPortModel>[].obs;
 
   Future<void> getPaymentData() async {
     await FireStoreUtils().getPayment().then((value) {
@@ -291,12 +545,17 @@ class HomeController extends GetxController {
   }
 
   RxList<ContactModel> contactList = <ContactModel>[].obs;
-  Rx<ContactModel> selectedTakingRide = ContactModel(fullName: "Myself", contactNumber: "").obs;
+  Rx<ContactModel> selectedTakingRide =
+      ContactModel(fullName: "Myself", contactNumber: "").obs;
   Rx<AriPortModel> selectedAirPort = AriPortModel().obs;
 
   setContact() {
     print(jsonEncode(contactList));
-    Preferences.setString(Preferences.contactList, json.encode(contactList.map<Map<String, dynamic>>((music) => music.toJson()).toList()));
+    Preferences.setString(
+        Preferences.contactList,
+        json.encode(contactList
+            .map<Map<String, dynamic>>((music) => music.toJson())
+            .toList()));
     getContact();
   }
 
@@ -306,7 +565,22 @@ class HomeController extends GetxController {
     if (contactListJson.isNotEmpty) {
       print("---->");
       contactList.clear();
-      contactList.value = (json.decode(contactListJson) as List<dynamic>).map<ContactModel>((item) => ContactModel.fromJson(item)).toList();
+      contactList.value = (json.decode(contactListJson) as List<dynamic>)
+          .map<ContactModel>((item) => ContactModel.fromJson(item))
+          .toList();
     }
+  }
+
+  Future<void> getServices(String mainServiceId) async {
+    isServicesLoading.value = true;
+    await FireStoreUtils.getServicesByMainServiceId(mainServiceId)
+        .then((value) {
+      serviceList.value = value;
+      if (serviceList.isNotEmpty) {
+        selectedType.value = serviceList.first;
+        calculateAmount();
+      }
+      isServicesLoading.value = false;
+    });
   }
 }

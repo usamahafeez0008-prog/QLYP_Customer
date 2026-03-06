@@ -37,7 +37,7 @@ class DashBoardScreen extends StatelessWidget {
                 return Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: InkWell(
-                    onTap: () => Scaffold.of(context).openDrawer(),
+                    onTap: () =>controller.selectedDrawerIndex.value = 0, //Scaffold.of(context).openDrawer(),
                     child: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
@@ -65,7 +65,9 @@ class DashBoardScreen extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: InkWell(
-                  onTap: () {},
+                  onTap: () {
+                    controller.selectedDrawerIndex.value = 2;
+                  },
                   child: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(

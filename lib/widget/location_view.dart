@@ -3,7 +3,7 @@ import 'package:customer/themes/responsive.dart';
 import 'package:customer/utils/DarkThemeProvider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dash/flutter_dash.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
@@ -11,7 +11,8 @@ class LocationView extends StatelessWidget {
   final String? sourceLocation;
   final String? destinationLocation;
 
-  const LocationView({super.key, this.sourceLocation, this.destinationLocation});
+  const LocationView(
+      {super.key, this.sourceLocation, this.destinationLocation});
 
   @override
   Widget build(BuildContext context) {
@@ -22,41 +23,78 @@ class LocationView extends StatelessWidget {
       children: [
         Column(
           children: [
-            SvgPicture.asset(themeChange.getThem() ? 'assets/icons/ic_source_dark.svg' : 'assets/icons/ic_source.svg', width: 18),
-            Dash(direction: Axis.vertical, length: Responsive.height(4, context), dashLength: 6, dashColor: AppColors.dottedDivider),
+            const SizedBox(height: 4),
             Container(
-              decoration: BoxDecoration(
-                color: themeChange.getThem() ? AppColors.darksecondprimary : AppColors.lightsecondprimary,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: SvgPicture.asset(
-                'assets/icons/ic_destination.svg',
-                width: 18,
-                color: themeChange.getThem() ? AppColors.containerBackground : AppColors.darkContainerBackground,
-              ),
-            ),
+                width: 14,
+                height: 14,
+                decoration: BoxDecoration(
+                    color: themeChange.getThem()
+                        ? AppColors.darkContainerBackground
+                        : Colors.white,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                        color: themeChange.getThem()
+                            ? Colors.white
+                            : const Color(0xff092d5c),
+                        width: 3))),
+            Dash(
+                direction: Axis.vertical,
+                length: Responsive.height(7, context),
+                dashLength: 4,
+                dashColor: Colors.grey.shade400),
+            Container(
+                width: 14,
+                height: 14,
+                decoration: BoxDecoration(
+                    color: themeChange.getThem()
+                        ? AppColors.darkContainerBackground
+                        : Colors.white,
+                    shape: BoxShape.circle,
+                    border:
+                        Border.all(color: const Color(0xff22B55E), width: 3))),
           ],
         ),
-        const SizedBox(
-          width: 10,
-        ),
+        const SizedBox(width: 16),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(sourceLocation.toString(), maxLines: 2, style: GoogleFonts.poppins()),
-              SizedBox(
-                  height: calculateLineWraps(text: sourceLocation.toString(), textStyle: TextStyle(), maxWidth: Responsive.width(80, context)) == 2
-                      ? Responsive.height(2.2, context)
-                      : Responsive.height(4.4, context)),
-              Text(
-                destinationLocation.toString(),
-                maxLines: 2,
-                style: GoogleFonts.poppins(),
-              )
+              Text("PICKUP".tr,
+                  style: GoogleFonts.poppins(
+                      color: themeChange.getThem()
+                          ? Colors.white
+                          : const Color(0xff092d5c),
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold)),
+              const SizedBox(height: 2),
+              Text(sourceLocation.toString(),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: themeChange.getThem()
+                          ? Colors.white
+                          : Colors.black87)),
+              SizedBox(height: Responsive.height(2.5, context)),
+              Text("DROP-OFF".tr,
+                  style: GoogleFonts.poppins(
+                      color: const Color(0xff22B55E),
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold)),
+              const SizedBox(height: 2),
+              Text(destinationLocation.toString(),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: themeChange.getThem()
+                          ? Colors.white
+                          : Colors.black87)),
             ],
           ),
-        ),
+        )
       ],
     );
   }

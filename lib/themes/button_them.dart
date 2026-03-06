@@ -14,7 +14,7 @@ class ButtonThem {
     double btnHeight = 48,
     double txtSize = 14,
     double btnWidthRatio = 0.9,
-    double btnRadius = 6,
+    double btnRadius = 16,
     required Function() onPress,
     bool isVisible = true,
   }) {
@@ -31,7 +31,7 @@ class ButtonThem {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(btnRadius),
           ),
-          color: themeChange.getThem() ? AppColors.darksecondprimary : AppColors.lightsecondprimary,
+          color: themeChange.getThem() ? AppColors.qlypDeepNavy : AppColors.qlypDeepNavy,
           child: Text(
             title.toUpperCase(),
             textAlign: TextAlign.center,

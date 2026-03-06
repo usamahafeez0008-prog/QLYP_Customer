@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:customer/constant/constant.dart';
 import 'package:customer/constant/show_toast_dialog.dart';
@@ -255,109 +256,133 @@ class HomeController extends GetxController {
     final dstLat = destinationLocationLAtLng.value.latitude;
     final dstLng = destinationLocationLAtLng.value.longitude;
 
-    if (srcLat == null || srcLng == null || dstLat == null || dstLng == null) {
-      print("Route aborted: coordinates missing");
-      return;
-    }
+    print("DrawRoute Called: src($srcLat, $srcLng), dst($dstLat, $dstLng)");
 
-    final LatLng source = LatLng(srcLat, srcLng);
-    final LatLng destination = LatLng(dstLat, dstLng);
-
-    /// MARKERS
-    markers.value = {
-      Marker(
-        markerId: const MarkerId("source"),
-        position: source,
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
-        infoWindow: const InfoWindow(title: 'Départ'),
-      ),
-      Marker(
-        markerId: const MarkerId("destination"),
-        position: destination,
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-        infoWindow: const InfoWindow(title: 'Destination'),
-      ),
-    };
-
-    List<LatLng> polylineCoordinates = [];
-
-    if (Constant.selectedMapType == 'osm') {
-      // OSRM Routing
-      final url = Uri.parse(
-        'https://router.project-osrm.org/route/v1/driving/${source.longitude},${source.latitude};${destination.longitude},${destination.latitude}?overview=full&geometries=polyline',
+    Set<Marker> newMarkers = {};
+    if (srcLat != null && srcLng != null) {
+      newMarkers.add(
+        Marker(
+          markerId: const MarkerId("source"),
+          position: LatLng(srcLat, srcLng),
+          icon:
+              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+          infoWindow: const InfoWindow(title: 'Départ'),
+        ),
       );
+    }
+    if (dstLat != null && dstLng != null) {
+      newMarkers.add(
+        Marker(
+          markerId: const MarkerId("destination"),
+          position: LatLng(dstLat, dstLng),
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+          infoWindow: const InfoWindow(title: 'Destination'),
+        ),
+      );
+    }
+    markers.assignAll(newMarkers);
 
-      try {
-        final response = await http.get(url);
-        if (response.statusCode == 200) {
-          final decoded = json.decode(response.body);
-          if (decoded['routes'] != null && decoded['routes'].isNotEmpty) {
-            String encodedPolyline = decoded['routes'][0]['geometry'];
-            List<PointLatLng> result =
-                PolylinePoints.decodePolyline(encodedPolyline);
-            polylineCoordinates =
-                result.map((p) => LatLng(p.latitude, p.longitude)).toList();
+    if (srcLat != null && srcLng != null && dstLat != null && dstLng != null) {
+      final LatLng source = LatLng(srcLat, srcLng);
+      final LatLng destination = LatLng(dstLat, dstLng);
+
+      List<LatLng> polylineCoordinates = [];
+
+      if (Constant.selectedMapType == 'osm') {
+        // OSRM Routing
+        final url = Uri.parse(
+          'https://router.project-osrm.org/route/v1/driving/${source.longitude},${source.latitude};${destination.longitude},${destination.latitude}?overview=full&geometries=polyline',
+        );
+
+        try {
+          final response = await http.get(url);
+          if (response.statusCode == 200) {
+            final decoded = json.decode(response.body);
+            if (decoded['routes'] != null && decoded['routes'].isNotEmpty) {
+              String encodedPolyline = decoded['routes'][0]['geometry'];
+              List<PointLatLng> result =
+                  PolylinePoints.decodePolyline(encodedPolyline);
+              polylineCoordinates =
+                  result.map((p) => LatLng(p.latitude, p.longitude)).toList();
+            }
           }
+        } catch (e) {
+          print("OSRM Routing Error: $e");
         }
-      } catch (e) {
-        print("OSRM Routing Error: $e");
+      } else {
+        // Google Maps Routing
+        PolylinePoints polylinePoints =
+            PolylinePoints(apiKey: Constant.mapAPIKey);
+        PolylineRequest polylineRequest = PolylineRequest(
+          origin: PointLatLng(srcLat, srcLng),
+          destination: PointLatLng(dstLat, dstLng),
+          mode: TravelMode.driving,
+        );
+
+        try {
+          PolylineResult result =
+              await polylinePoints.getRouteBetweenCoordinates(
+            request: polylineRequest,
+          );
+          if (result.points.isNotEmpty) {
+            polylineCoordinates = result.points
+                .map((p) => LatLng(p.latitude, p.longitude))
+                .toList();
+          }
+        } catch (e) {
+          print("Google Routing Error: $e");
+        }
+      }
+
+      // Fallback to straight line if routing failed
+      if (polylineCoordinates.isEmpty) {
+        polylineCoordinates = [source, destination];
+      }
+
+      /// POLYLINE
+      polylines.assignAll({
+        Polyline(
+          polylineId: const PolylineId("route"),
+          points: polylineCoordinates,
+          width: 6,
+          color: AppColors.qlypDeepNavy,
+          geodesic: true,
+        )
+      });
+
+      /// CAMERA FIT
+      if (mapController != null) {
+        final bounds = LatLngBounds(
+          southwest: LatLng(
+            srcLat < dstLat ? srcLat : dstLat,
+            srcLng < dstLng ? srcLng : dstLng,
+          ),
+          northeast: LatLng(
+            srcLat > dstLat ? srcLat : dstLat,
+            srcLng > dstLng ? srcLng : dstLng,
+          ),
+        );
+
+        mapController!.animateCamera(
+          CameraUpdate.newLatLngBounds(bounds, 100),
+        );
       }
     } else {
-      // Google Maps Routing
-      PolylinePoints polylinePoints =
-          PolylinePoints(apiKey: Constant.mapAPIKey);
-      PolylineRequest polylineRequest = PolylineRequest(
-        origin: PointLatLng(srcLat, srcLng),
-        destination: PointLatLng(dstLat, dstLng),
-        mode: TravelMode.driving,
-      );
+      // Clear polylines if both are not selected
+      polylines.clear();
 
-      try {
-        PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
-          request: polylineRequest,
-        );
-        if (result.points.isNotEmpty) {
-          polylineCoordinates = result.points
-              .map((p) => LatLng(p.latitude, p.longitude))
-              .toList();
+      // Focus camera on whichever point is selected
+      if (mapController != null) {
+        if (srcLat != null && srcLng != null) {
+          mapController!.animateCamera(
+            CameraUpdate.newLatLng(LatLng(srcLat, srcLng)),
+          );
+        } else if (dstLat != null && dstLng != null) {
+          mapController!.animateCamera(
+            CameraUpdate.newLatLng(LatLng(dstLat, dstLng)),
+          );
         }
-      } catch (e) {
-        print("Google Routing Error: $e");
       }
-    }
-
-    // Fallback to straight line if routing failed
-    if (polylineCoordinates.isEmpty) {
-      polylineCoordinates = [source, destination];
-    }
-
-    /// POLYLINE
-    polylines.assignAll({
-      Polyline(
-        polylineId: const PolylineId("route"),
-        points: polylineCoordinates,
-        width: 6,
-        color: AppColors.qlypDeepNavy,
-        geodesic: true,
-      )
-    });
-
-    /// CAMERA FIT
-    if (mapController != null) {
-      final bounds = LatLngBounds(
-        southwest: LatLng(
-          srcLat < dstLat ? srcLat : dstLat,
-          srcLng < dstLng ? srcLng : dstLng,
-        ),
-        northeast: LatLng(
-          srcLat > dstLat ? srcLat : dstLat,
-          srcLng > dstLng ? srcLng : dstLng,
-        ),
-      );
-
-      mapController!.animateCamera(
-        CameraUpdate.newLatLngBounds(bounds, 80),
-      );
     }
 
     update(); // important for GetBuilder
@@ -527,6 +552,23 @@ class HomeController extends GetxController {
   RxString selectedPaymentMethod = "".obs;
   final selectedServiceCategory = "Taxi".obs;
   final personCount = 1.obs;
+
+  // ── Logistique details fields ──────────────────────────────────────────────
+  final logistiqueRoomCount = 1.obs;
+  final logistiqueHasElevator = false.obs;
+  final logistiqueFloor = "Rez-de-chaussée".obs;
+  final logistiqueWeight = TextEditingController();
+  final logistiqueDimL = TextEditingController();
+  final logistiqueDimW = TextEditingController();
+  final logistiqueDimH = TextEditingController();
+  final logistiqueDescription = TextEditingController();
+  final logistiquePickupDate = Rx<DateTime>(DateTime.now());
+  // ──────────────────────────────────────────────────────────────────────────
+
+  // ── Livraison details fields ───────────────────────────────────────────────
+  final livraisonDeliveryType = "Standard".obs;
+  final livraisonParcelImage = Rx<File?>(null);
+  // ───────────────────────────────────────────────────────────────────────────
 
   RxList<AriPortModel> airPortList = <AriPortModel>[].obs;
 

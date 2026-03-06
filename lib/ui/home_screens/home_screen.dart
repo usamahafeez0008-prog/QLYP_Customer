@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:customer/controller/home_controller.dart';
@@ -6,7 +7,8 @@ import 'package:customer/themes/app_colors.dart';
 import 'package:customer/utils/DarkThemeProvider.dart';
 import 'package:customer/widget/osm_map/map_picker_page.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import 'package:image_picker/image_picker.dart';
+
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -55,8 +57,8 @@ class HomeScreen extends StatelessWidget {
                                         74.31415762965483),
                                 zoom: 14.0,
                               ),
-                              markers: controller.markers,
-                              polylines: controller.polylines,
+                              markers: controller.markerSet,
+                              polylines: controller.polylineSet,
                               myLocationEnabled: true,
                               myLocationButtonEnabled: false,
                               zoomControlsEnabled: false,
@@ -79,7 +81,7 @@ class HomeScreen extends StatelessWidget {
                                         .map((service) {
                                       return _buildServiceTab(
                                         context,
-                                        title: service.serviceName ?? "",
+                                        title: (service.serviceName ?? "").tr,
                                         iconPath: service.image,
                                         isSelected: controller
                                                 .selectedServiceCategory
@@ -218,7 +220,7 @@ class HomeScreen extends StatelessWidget {
                 children: [
                   _buildLocationField(
                     context,
-                    hint: "D'où partez-vous ?",
+                    hint: "Where are you leaving from?",
                     controller: controller.sourceLocationController.value,
                     iconColor: Colors.green,
                     onTap: () async {
@@ -246,7 +248,7 @@ class HomeScreen extends StatelessWidget {
                   const SizedBox(height: 12),
                   _buildLocationField(
                     context,
-                    hint: "Quelle destination ?",
+                    hint: "Which destination?",
                     controller: controller.destinationLocationController.value,
                     iconColor: Colors.red,
                     onTap: () async {
@@ -360,15 +362,17 @@ class HomeScreen extends StatelessWidget {
                   const SizedBox(height: 20),
 
                   // Urgent, Later booking Card
-                  Obx(() =>
-                      controller.selectedServiceCategory.value == "Livraison"
-                          ? const SizedBox.shrink()
-                          : Column(
-                              children: [
-                                _buildModernBookingOptionsRow(controller),
-                                const SizedBox(height: 20),
-                              ],
-                            )),
+                  Obx(() => (controller.selectedServiceCategory.value ==
+                              "Livraison" ||
+                          controller.selectedServiceCategory.value ==
+                              "Logistique")
+                      ? const SizedBox.shrink()
+                      : Column(
+                          children: [
+                            _buildModernBookingOptionsRow(controller),
+                            const SizedBox(height: 20),
+                          ],
+                        )),
 
                   // Delivery Details Section (Visible only for Livraison)
                   Obx(() =>
@@ -377,177 +381,330 @@ class HomeScreen extends StatelessWidget {
                           : const SizedBox.shrink()),
 
                   // Estimated Fare Card
-                  _buildEstimatedFareCard(controller),
+                  Obx(() =>
+                      controller.selectedServiceCategory.value == "Logistique"
+                          ? const SizedBox.shrink()
+                          : _buildEstimatedFareCard(controller)),
+                  // Logistique Details Section
+                  Obx(() =>
+                      controller.selectedServiceCategory.value == "Logistique"
+                          ? _buildLogistiqueDetailsSection(context, controller)
+                          : const SizedBox.shrink()),
+
                   const SizedBox(height: 16),
                   // Ride Booking Button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 56,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.qlypDeepNavy,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16)),
-                        elevation: 0,
-                      ),
-                      onPressed: () async {
-                        bool isPaymentNotCompleted =
-                            await FireStoreUtils.paymentStatusCheck();
-                        bool isActiveRide =
-                            await FireStoreUtils.checkActiveRide();
+                  Obx(() {
+                    final isLogistique =
+                        controller.selectedServiceCategory.value ==
+                            "Logistique";
+                    return SizedBox(
+                      width: double.infinity,
+                      height: 64,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.qlypDeepNavy,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16)),
+                          elevation: 0,
+                          padding: EdgeInsets.zero,
+                        ),
+                        onPressed: () async {
+                          bool isPaymentNotCompleted =
+                              await FireStoreUtils.paymentStatusCheck();
+                          bool isActiveRide =
+                              await FireStoreUtils.checkActiveRide();
 
-                        if (controller
-                            .sourceLocationController.value.text.isEmpty) {
-                          ShowToastDialog.showToast(
-                              "Please select source location");
-                          return;
-                        }
-
-                        if (controller
-                            .destinationLocationController.value.text.isEmpty) {
-                          ShowToastDialog.showToast(
-                              "Please select destination location");
-                          return;
-                        }
-
-                        if (isPaymentNotCompleted) {
-                          showAlertDialog(context);
-                          return;
-                        }
-
-                        if (isActiveRide) {
-                          ShowToastDialog.showToast(
-                              "You already have an active ride. Please complete it first.");
-                          return;
-                        }
-
-                        ShowToastDialog.showLoader("Please wait");
-                        try {
-                          await controller.calculateDurationAndDistance();
-
-                          OrderModel orderModel = OrderModel();
-                          orderModel.id = Constant.getUuid();
-                          orderModel.userId = FireStoreUtils.getCurrentUid();
-                          orderModel.sourceLocationName =
-                              controller.sourceLocationController.value.text;
-                          orderModel.destinationLocationName = controller
-                              .destinationLocationController.value.text;
-                          orderModel.sourceLocationLAtLng =
-                              controller.sourceLocationLAtLng.value;
-                          orderModel.destinationLocationLAtLng =
-                              controller.destinationLocationLAtLng.value;
-                          orderModel.distance = controller.distance.value;
-                          orderModel.duration = controller.duration.value;
-                          orderModel.distanceType = Constant.distanceType;
-                          orderModel.offerRate = controller.amount.value.isEmpty
-                              ? "10"
-                              : controller.amount.value;
-                          orderModel.serviceId =
-                              controller.selectedType.value.id;
-                          orderModel.service = controller.selectedType.value;
-
-                          GeoFirePoint position = Geoflutterfire().point(
-                            latitude:
-                                controller.sourceLocationLAtLng.value.latitude!,
-                            longitude: controller
-                                .sourceLocationLAtLng.value.longitude!,
-                          );
-                          orderModel.position = Positions(
-                              geoPoint: position.geoPoint,
-                              geohash: position.hash);
-                          orderModel.createdDate = Timestamp.now();
-                          orderModel.status = Constant.ridePlaced;
-                          orderModel.paymentType = "Cash";
-                          orderModel.paymentStatus = false;
-                          orderModel.otp = Constant.getReferralCode();
-                          orderModel.taxList = Constant.taxList;
-                          orderModel.adminCommission =
-                              controller.selectedType.value.adminCommission;
-
-                          if (controller.selectedType.value.prices != null &&
-                              controller
-                                  .selectedType.value.prices!.isNotEmpty) {
-                            orderModel.zoneId = controller
-                                .selectedType.value.prices!.first.zoneId;
-                            for (var zone in controller.zoneList) {
-                              if (zone.id == orderModel.zoneId) {
-                                orderModel.zone = zone;
-                                break;
-                              }
-                            }
+                          if (controller
+                              .sourceLocationController.value.text.isEmpty) {
+                            ShowToastDialog.showToast(
+                                "Please select source location");
+                            return;
                           }
 
-                          await FireStoreUtils()
-                              .sendOrderDataFuture(orderModel)
-                              .then((eventData) async {
-                            for (var driver in eventData) {
-                              if (driver.fcmToken != null) {
-                                Map<String, dynamic> playLoad =
-                                    <String, dynamic>{
-                                  "type": "city_order",
-                                  "orderId": orderModel.id
-                                };
-                                await SendNotification.sendOneNotification(
-                                  token: driver.fcmToken.toString(),
-                                  title: 'New Ride Available',
-                                  body:
-                                      'A customer has placed a ride near your location.',
-                                  payload: playLoad,
-                                );
+                          if (controller.destinationLocationController.value
+                              .text.isEmpty) {
+                            ShowToastDialog.showToast(
+                                "Please select destination location");
+                            return;
+                          }
+
+                          if (isPaymentNotCompleted) {
+                            showAlertDialog(context);
+                            return;
+                          }
+
+                          if (isActiveRide) {
+                            controller.dashboardController
+                                .selectedDrawerIndex(2);
+                            ShowToastDialog.showToast(
+                                "You already have an active ride. Please complete it first.");
+                            return;
+                          }
+
+                          ShowToastDialog.showLoader("Please wait");
+                          try {
+                            await controller.calculateDurationAndDistance();
+
+                            OrderModel orderModel = OrderModel();
+                            orderModel.id = Constant.getUuid();
+                            orderModel.userId = FireStoreUtils.getCurrentUid();
+                            orderModel.sourceLocationName =
+                                controller.sourceLocationController.value.text;
+                            orderModel.destinationLocationName = controller
+                                .destinationLocationController.value.text;
+                            orderModel.sourceLocationLAtLng =
+                                controller.sourceLocationLAtLng.value;
+                            orderModel.destinationLocationLAtLng =
+                                controller.destinationLocationLAtLng.value;
+                            orderModel.distance = controller.distance.value;
+                            orderModel.duration = controller.duration.value;
+                            orderModel.distanceType = Constant.distanceType;
+                            orderModel.offerRate =
+                                controller.amount.value.isEmpty
+                                    ? "10"
+                                    : controller.amount.value;
+                            orderModel.serviceId =
+                                controller.selectedType.value.id;
+                            orderModel.service = controller.selectedType.value;
+
+                            GeoFirePoint position = Geoflutterfire().point(
+                              latitude: controller
+                                  .sourceLocationLAtLng.value.latitude!,
+                              longitude: controller
+                                  .sourceLocationLAtLng.value.longitude!,
+                            );
+                            orderModel.position = Positions(
+                                geoPoint: position.geoPoint,
+                                geohash: position.hash);
+                            orderModel.createdDate = Timestamp.now();
+                            orderModel.status = Constant.ridePlaced;
+                            orderModel.paymentType = "Cash";
+                            orderModel.paymentStatus = false;
+                            orderModel.otp = Constant.getReferralCode();
+                            orderModel.taxList = Constant.taxList;
+                            orderModel.adminCommission =
+                                controller.selectedType.value.adminCommission;
+
+                            if (controller.selectedType.value.prices != null &&
+                                controller
+                                    .selectedType.value.prices!.isNotEmpty) {
+                              orderModel.zoneId = controller
+                                  .selectedType.value.prices!.first.zoneId;
+                              for (var zone in controller.zoneList) {
+                                if (zone.id == orderModel.zoneId) {
+                                  orderModel.zone = zone;
+                                  break;
+                                }
                               }
                             }
-                          });
 
-                          await FireStoreUtils.setOrder(orderModel);
-                          ShowToastDialog.closeLoader();
-                          ShowToastDialog.showToast("Ride Placed Successfully");
-                        } catch (e) {
-                          ShowToastDialog.closeLoader();
-                          ShowToastDialog.showToast("Error booking ride: $e");
-                        }
-                      },
-                      child: Text(
-                        "Réserver",
-                        style: GoogleFonts.poppins(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 18),
+                            orderModel.mainServiceType =
+                                controller.selectedServiceCategory.value;
+                            orderModel.mainServiceID =
+                                controller.selectedType.value.mainServiceID;
+
+                            Map<String, dynamic> details = {};
+
+                            if (controller.selectedServiceCategory.value ==
+                                "Logistique") {
+                              details['roomCount'] =
+                                  controller.logistiqueRoomCount.value;
+                              details['hasElevator'] =
+                                  controller.logistiqueHasElevator.value;
+                              details['floor'] =
+                                  controller.logistiqueFloor.value;
+                              details['weight'] =
+                                  controller.logistiqueWeight.text;
+                              details['dimensions'] =
+                                  "${controller.logistiqueDimL.text} x ${controller.logistiqueDimW.text} x ${controller.logistiqueDimH.text}";
+                              details['description'] =
+                                  controller.logistiqueDescription.text;
+                              details['logistiquePickupDate'] =
+                                  Timestamp.fromDate(
+                                      controller.logistiquePickupDate.value);
+                            } else if (controller
+                                    .selectedServiceCategory.value ==
+                                "Livraison") {
+                              details['deliveryType'] =
+                                  controller.livraisonDeliveryType.value;
+                              if (controller.livraisonParcelImage.value !=
+                                  null) {
+                                ShowToastDialog.showLoader(
+                                    "Uploading image...");
+                                String imageUrl =
+                                    await Constant.uploadUserImageToFireStorage(
+                                        controller.livraisonParcelImage.value!,
+                                        'parcelImages',
+                                        '${DateTime.now().millisecondsSinceEpoch}.png');
+                                details['parcelImage'] = imageUrl;
+                                ShowToastDialog.closeLoader();
+                              }
+                            }
+                            orderModel.serviceDetails = details;
+
+                            await FireStoreUtils()
+                                .sendOrderDataFuture(orderModel)
+                                .then((eventData) async {
+                              for (var driver in eventData) {
+                                if (driver.fcmToken != null) {
+                                  Map<String, dynamic> playLoad =
+                                      <String, dynamic>{
+                                    "type": "city_order",
+                                    "orderId": orderModel.id
+                                  };
+                                  await SendNotification.sendOneNotification(
+                                    token: driver.fcmToken.toString(),
+                                    title: 'New Ride Available',
+                                    body:
+                                        'A customer has placed a ride near your location.',
+                                    payload: playLoad,
+                                  );
+                                }
+                              }
+                            });
+
+                            await FireStoreUtils.setOrder(orderModel);
+                            ShowToastDialog.closeLoader();
+                            ShowToastDialog.showToast(
+                                "Ride Placed Successfully");
+                            controller.dashboardController
+                                .selectedDrawerIndex(2);
+                          } catch (e) {
+                            ShowToastDialog.closeLoader();
+                            ShowToastDialog.showToast("Error booking ride: $e");
+                          }
+                        },
+                        child: isLogistique
+                            ? Row(
+                                children: [
+                                  // Left: RÉSERVER un transport
+                                  Expanded(
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 16),
+                                      child: Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            "BOOK",
+                                            style: GoogleFonts.poppins(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 15,
+                                                letterSpacing: 0.5),
+                                          ),
+                                          Text(
+                                            "a transport",
+                                            style: GoogleFonts.poppins(
+                                                color: Colors.white70,
+                                                fontWeight: FontWeight.w500,
+                                                fontSize: 13),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  // Divider
+                                  Container(
+                                      width: 1,
+                                      height: 40,
+                                      color: Colors.white24),
+                                  // Right: à partir de X$
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Column(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.center,
+                                          children: [
+                                            Text(
+                                              "starting at",
+                                              style: GoogleFonts.poppins(
+                                                  color: Colors.white70,
+                                                  fontSize: 11),
+                                            ),
+                                            Obx(() => Text(
+                                                  controller.amount.value
+                                                              .isEmpty ||
+                                                          controller.amount
+                                                                  .value ==
+                                                              "0.0" ||
+                                                          controller.amount
+                                                                  .value ==
+                                                              "0"
+                                                      ? "---"
+                                                      : Constant.amountShow(
+                                                          amount: controller
+                                                              .amount.value),
+                                                  style: GoogleFonts.poppins(
+                                                      color: Colors.white,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      fontSize: 15),
+                                                )),
+                                          ],
+                                        ),
+                                        const SizedBox(width: 8),
+                                        const Icon(Icons.arrow_forward_rounded,
+                                            color: Colors.white, size: 20),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : Text(
+                                "Book Now",
+                                style: GoogleFonts.poppins(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 18),
+                              ),
                       ),
-                    ),
-                  ),
+                    );
+                  }),
                   const SizedBox(height: 16),
 
                   //Build Social Icon
-                  Obx(() =>
-                      controller.selectedServiceCategory.value == "Livraison"
-                          ? const SizedBox.shrink()
-                          : Column(
+                  Obx(() => (controller.selectedServiceCategory.value ==
+                              "Livraison" ||
+                          controller.selectedServiceCategory.value ==
+                              "Logistique")
+                      ? const SizedBox.shrink()
+                      : Column(
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      "Ou RÉSERVER via",
-                                      style: GoogleFonts.poppins(
-                                        color: AppColors.qlypDeepNavy,
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 15),
-                                    _buildSocialIcon(
-                                        'assets/images/ic_btn_phone.png'),
-                                    const SizedBox(width: 5),
-                                    _buildSocialIcon(
-                                        'assets/images/ic_btn_sms.png'),
-                                    const SizedBox(width: 5),
-                                    _buildSocialIcon(
-                                        'assets/images/ic_btn_whatsApp.png'),
-                                  ],
+                                Text(
+                                  "Or Book Via",
+                                  style: GoogleFonts.poppins(
+                                    color: AppColors.qlypDeepNavy,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                  ),
                                 ),
-                                const SizedBox(height: 16),
+                                const SizedBox(width: 15),
+                                _buildSocialIcon(
+                                    'assets/images/ic_btn_phone.png'),
+                                const SizedBox(width: 5),
+                                _buildSocialIcon(
+                                    'assets/images/ic_btn_sms.png'),
+                                const SizedBox(width: 5),
+                                _buildSocialIcon(
+                                    'assets/images/ic_btn_whatsApp.png'),
                               ],
-                            )),
+                            ),
+                            const SizedBox(height: 16),
+                          ],
+                        )),
                   const SizedBox(height: 50),
                 ],
               ),
@@ -609,7 +766,7 @@ class HomeScreen extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          "Détails",
+          "Details",
           style: GoogleFonts.poppins(
             fontSize: 18,
             fontWeight: FontWeight.w700,
@@ -622,44 +779,670 @@ class HomeScreen extends StatelessWidget {
             Expanded(
               child: Container(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(30),
                   border: Border.all(color: Colors.grey[200]!),
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      "Standard",
+                child: Obx(() => DropdownButton<String>(
+                      value: controller.livraisonDeliveryType.value,
+                      isExpanded: true,
+                      underline: const SizedBox(),
+                      icon: const Icon(Icons.keyboard_arrow_down_rounded,
+                          color: AppColors.qlypDeepNavy),
                       style: GoogleFonts.poppins(
-                        fontSize: 16,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
                         color: AppColors.qlypDeepNavy,
-                        fontWeight: FontWeight.w500,
                       ),
-                    ),
-                    Icon(Icons.keyboard_arrow_down,
-                        color: AppColors.qlypDeepNavy),
-                  ],
-                ),
+                      onChanged: (String? newValue) {
+                        if (newValue != null) {
+                          controller.livraisonDeliveryType.value = newValue;
+                        }
+                      },
+                      items: <String>['Standard', 'Express', 'Fragile']
+                          .map<DropdownMenuItem<String>>((String value) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(value),
+                        );
+                      }).toList(),
+                    )),
               ),
             ),
             const SizedBox(width: 12),
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: Colors.grey[50],
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.grey[100]!),
-              ),
-              child: Icon(Icons.add_a_photo_outlined,
-                  color: AppColors.qlypDeepNavy, size: 24),
+            GestureDetector(
+              onTap: () => _showImagePickerDialog(context, controller),
+              child: Obx(() => Container(
+                    width: 54,
+                    height: 54,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                          color: controller.livraisonParcelImage.value != null
+                              ? AppColors.qlypDeepNavy
+                              : Colors.transparent),
+                      image: controller.livraisonParcelImage.value != null
+                          ? DecorationImage(
+                              image: FileImage(
+                                  controller.livraisonParcelImage.value!),
+                              fit: BoxFit.cover,
+                            )
+                          : null,
+                    ),
+                    child: controller.livraisonParcelImage.value == null
+                        ? const Icon(Icons.add_a_photo_outlined,
+                            size: 24, color: AppColors.qlypDeepNavy)
+                        : null,
+                  )),
             ),
           ],
         ),
         const SizedBox(height: 24),
       ],
+    );
+  }
+
+  void _showImagePickerDialog(BuildContext context, HomeController controller) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text("Select an image".tr,
+                style: GoogleFonts.poppins(
+                    fontSize: 16, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _pickerOption(
+                  icon: Icons.camera_alt_rounded,
+                  label: "Camera".tr,
+                  onTap: () async {
+                    Navigator.pop(context);
+                    final image = await ImagePicker()
+                        .pickImage(source: ImageSource.camera);
+                    if (image != null) {
+                      controller.livraisonParcelImage.value = File(image.path);
+                    }
+                  },
+                ),
+                _pickerOption(
+                  icon: Icons.photo_library_rounded,
+                  label: "Gallery".tr,
+                  onTap: () async {
+                    Navigator.pop(context);
+                    final image = await ImagePicker()
+                        .pickImage(source: ImageSource.gallery);
+                    if (image != null) {
+                      controller.livraisonParcelImage.value = File(image.path);
+                    }
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 30),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _pickerOption(
+      {required IconData icon,
+      required String label,
+      required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(15),
+            decoration: BoxDecoration(
+              color: AppColors.qlypDeepNavy.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: AppColors.qlypDeepNavy, size: 30),
+          ),
+          const SizedBox(height: 8),
+          Text(label, style: GoogleFonts.poppins(fontSize: 12)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLogistiqueDetailsSection(
+      BuildContext context, HomeController controller) {
+    const inputDecoration = InputDecoration(
+      isDense: true,
+      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.all(Radius.circular(14)),
+        borderSide: BorderSide(color: Color(0xFFE0E0E0)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.all(Radius.circular(14)),
+        borderSide: BorderSide(color: Color(0xFFE0E0E0)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.all(Radius.circular(14)),
+        borderSide: BorderSide(color: Color(0xFF1A2340), width: 1.5),
+      ),
+      filled: true,
+      fillColor: Colors.white,
+    );
+
+    final floorOptions = [
+      "Ground floor",
+      "1st Floor",
+      "2nd Floor",
+      "3rd Floor",
+      "4th Floor",
+      "5th Floor",
+      "6th Floor+",
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ── Section 1: Location details ──────────────────────────────────
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.home_outlined,
+                      size: 20, color: Color(0xFF1A2340)),
+                  const SizedBox(width: 8),
+                  Text(
+                    "Location details",
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF1A2340),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+
+              // Nombre de pièces
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Number of rooms",
+                          style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.w600, fontSize: 14),
+                        ),
+                        Text(
+                          "Includes living room, bedrooms, kitchen",
+                          style: GoogleFonts.poppins(
+                              fontSize: 11, color: Colors.grey.shade500),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Obx(() => Row(
+                        children: [
+                          // Minus
+                          GestureDetector(
+                            onTap: () {
+                              if (controller.logistiqueRoomCount.value > 1) {
+                                controller.logistiqueRoomCount.value--;
+                              }
+                            },
+                            child: Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade100,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(Icons.remove, size: 18),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
+                            child: Text(
+                              "${controller.logistiqueRoomCount.value}",
+                              style: GoogleFonts.poppins(
+                                  fontWeight: FontWeight.bold, fontSize: 18),
+                            ),
+                          ),
+                          // Plus
+                          GestureDetector(
+                            onTap: () => controller.logistiqueRoomCount.value++,
+                            child: Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF1A2340),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(Icons.add,
+                                  size: 18, color: Colors.white),
+                            ),
+                          ),
+                        ],
+                      )),
+                ],
+              ),
+              const SizedBox(height: 18),
+
+              // Ascenseur + Étage
+              Row(
+                children: [
+                  // Ascenseur toggle
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Elevator",
+                          style: GoogleFonts.poppins(
+                              fontSize: 12, color: Colors.grey.shade600),
+                        ),
+                        const SizedBox(height: 6),
+                        Obx(() => Container(
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade100,
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  _elevatorToggleChip(
+                                    label: "No",
+                                    selected:
+                                        !controller.logistiqueHasElevator.value,
+                                    onTap: () => controller
+                                        .logistiqueHasElevator.value = false,
+                                  ),
+                                  _elevatorToggleChip(
+                                    label: "Yes",
+                                    selected:
+                                        controller.logistiqueHasElevator.value,
+                                    onTap: () => controller
+                                        .logistiqueHasElevator.value = true,
+                                  ),
+                                ],
+                              ),
+                            )),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // Étage dropdown
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Floor",
+                          style: GoogleFonts.poppins(
+                              fontSize: 12, color: Colors.grey.shade600),
+                        ),
+                        const SizedBox(height: 6),
+                        Obx(() => Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(30),
+                                border: Border.all(color: Colors.grey.shade300),
+                              ),
+                              child: DropdownButtonHideUnderline(
+                                child: DropdownButton<String>(
+                                  value: controller.logistiqueFloor.value,
+                                  isDense: true,
+                                  isExpanded: true,
+                                  style: GoogleFonts.poppins(
+                                      fontSize: 13, color: Colors.black87),
+                                  items: floorOptions
+                                      .map((f) => DropdownMenuItem(
+                                          value: f, child: Text(f)))
+                                      .toList(),
+                                  onChanged: (v) {
+                                    if (v != null) {
+                                      controller.logistiqueFloor.value = v;
+                                    }
+                                  },
+                                ),
+                              ),
+                            )),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // ── Section 2: Load estimation ──────────────────────────
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.scale_outlined,
+                      size: 20, color: Color(0xFF1A2340)),
+                  const SizedBox(width: 8),
+                  Text(
+                    "Load estimation",
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF1A2340),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Poids + Dimensions
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Poids
+                  Expanded(
+                    flex: 2,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "WEIGHT (KG)",
+                          style: GoogleFonts.poppins(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey.shade500,
+                              letterSpacing: 0.5),
+                        ),
+                        const SizedBox(height: 6),
+                        TextFormField(
+                          controller: controller.logistiqueWeight,
+                          keyboardType: TextInputType.number,
+                          decoration: inputDecoration.copyWith(
+                              hintText: "0",
+                              hintStyle: GoogleFonts.poppins(
+                                  color: Colors.grey.shade400)),
+                          style: GoogleFonts.poppins(fontSize: 14),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // Dimensions
+                  Expanded(
+                    flex: 5,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "DIMENSIONS L X W X H (CM)",
+                          style: GoogleFonts.poppins(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey.shade500,
+                              letterSpacing: 0.5),
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextFormField(
+                                controller: controller.logistiqueDimL,
+                                keyboardType: TextInputType.number,
+                                decoration: inputDecoration,
+                                style: GoogleFonts.poppins(fontSize: 13),
+                              ),
+                            ),
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 4),
+                              child: Text("x",
+                                  style: GoogleFonts.poppins(
+                                      color: Colors.grey.shade500)),
+                            ),
+                            Expanded(
+                              child: TextFormField(
+                                controller: controller.logistiqueDimW,
+                                keyboardType: TextInputType.number,
+                                decoration: inputDecoration,
+                                style: GoogleFonts.poppins(fontSize: 13),
+                              ),
+                            ),
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 4),
+                              child: Text("x",
+                                  style: GoogleFonts.poppins(
+                                      color: Colors.grey.shade500)),
+                            ),
+                            Expanded(
+                              child: TextFormField(
+                                controller: controller.logistiqueDimH,
+                                keyboardType: TextInputType.number,
+                                decoration: inputDecoration,
+                                style: GoogleFonts.poppins(fontSize: 13),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+
+              // Description
+              TextFormField(
+                controller: controller.logistiqueDescription,
+                maxLines: 3,
+                decoration: inputDecoration.copyWith(
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  hintText:
+                      "Description of items (ex: Piano, large fragile mirror, 10 boxes of books...)",
+                  hintStyle: GoogleFonts.poppins(
+                      fontSize: 12, color: Colors.grey.shade400),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: Color(0xFFE0E0E0))),
+                  enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: Color(0xFFE0E0E0))),
+                  focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(
+                          color: Color(0xFF1A2340), width: 1.5)),
+                  filled: true,
+                  fillColor: Colors.white,
+                ),
+                style: GoogleFonts.poppins(fontSize: 13),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // ── Section 3: Pickup date ──────────────────────────
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF8E7),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.calendar_today_outlined,
+                    size: 22, color: Color(0xFFE6A817)),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "PICKUP DATE",
+                      style: GoogleFonts.poppins(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey.shade500,
+                          letterSpacing: 0.5),
+                    ),
+                    const SizedBox(height: 2),
+                    Obx(() {
+                      final d = controller.logistiquePickupDate.value;
+                      final now = DateTime.now();
+                      final isToday = d.year == now.year &&
+                          d.month == now.month &&
+                          d.day == now.day;
+                      final label = isToday
+                          ? "Today, ${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}"
+                          : "${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}, ${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}";
+                      return Text(
+                        label,
+                        style: GoogleFonts.poppins(
+                            fontSize: 15, fontWeight: FontWeight.w700),
+                      );
+                    }),
+                  ],
+                ),
+              ),
+              GestureDetector(
+                onTap: () async {
+                  final pickedDate = await showDatePicker(
+                    context: context,
+                    initialDate: controller.logistiquePickupDate.value,
+                    firstDate: DateTime.now(),
+                    lastDate: DateTime.now().add(const Duration(days: 90)),
+                    builder: (context, child) => Theme(
+                      data: Theme.of(context).copyWith(
+                        colorScheme: const ColorScheme.light(
+                          primary: AppColors.qlypDeepNavy,
+                          onPrimary: Colors.white,
+                          onSurface: Colors.black87,
+                        ),
+                        dialogBackgroundColor: Colors.white,
+                        textButtonTheme: TextButtonThemeData(
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppColors.qlypDeepNavy,
+                          ),
+                        ),
+                      ),
+                      child: child!,
+                    ),
+                  );
+                  if (pickedDate != null) {
+                    final pickedTime = await showTimePicker(
+                      context: context,
+                      initialTime: TimeOfDay.fromDateTime(
+                          controller.logistiquePickupDate.value),
+                      builder: (context, child) => Theme(
+                        data: Theme.of(context).copyWith(
+                          colorScheme: const ColorScheme.light(
+                            primary: AppColors.qlypDeepNavy,
+                            onPrimary: Colors.white,
+                            onSurface: Colors.black87,
+                          ),
+                          dialogBackgroundColor: Colors.white,
+                          textButtonTheme: TextButtonThemeData(
+                            style: TextButton.styleFrom(
+                              foregroundColor: AppColors.qlypDeepNavy,
+                            ),
+                          ),
+                        ),
+                        child: child!,
+                      ),
+                    );
+                    if (pickedTime != null) {
+                      controller.logistiquePickupDate.value = DateTime(
+                        pickedDate.year,
+                        pickedDate.month,
+                        pickedDate.day,
+                        pickedTime.hour,
+                        pickedTime.minute,
+                      );
+                    }
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.edit_calendar_outlined,
+                      size: 20, color: AppColors.qlypDeepNavy),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+
+  Widget _elevatorToggleChip({
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFF1A2340) : Colors.transparent,
+          borderRadius: BorderRadius.circular(30),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: selected ? Colors.white : Colors.grey.shade600,
+          ),
+        ),
+      ),
     );
   }
 
@@ -740,7 +1523,7 @@ class HomeScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "ESTIMÉ".tr,
+                    "ESTIMATED".tr,
                     style: GoogleFonts.poppins(
                       color: Colors.black.withOpacity(0.8),
                       fontSize: 10,
@@ -749,7 +1532,7 @@ class HomeScreen extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    "Basé sur la distance".tr,
+                    "Based on distance".tr,
                     style: GoogleFonts.poppins(
                       color: Colors.black.withOpacity(0.5),
                       fontSize: 12,
@@ -860,7 +1643,7 @@ class HomeScreen extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Maintenant / Plus tard toggle
+          // Now / Later toggle
           Container(
             padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
@@ -871,13 +1654,13 @@ class HomeScreen extends StatelessWidget {
               children: [
                 _buildModernToggleChip(
                   icon: Icons.flash_on,
-                  label: "Maintenant",
+                  label: "Now",
                   isSelected: true,
                   onTap: () {},
                 ),
                 _buildModernToggleChip(
                   icon: Icons.access_time,
-                  label: "Plus tard",
+                  label: "Later",
                   isSelected: false,
                   onTap: () {},
                 ),

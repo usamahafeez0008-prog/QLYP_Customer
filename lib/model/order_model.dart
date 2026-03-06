@@ -46,6 +46,9 @@ class OrderModel {
   String? zoneId;
   VehicleInformation? vehicleInformation;
   String? ownerId;
+  String? mainServiceType;
+  String? mainServiceID;
+  Map<String, dynamic>? serviceDetails;
 
   OrderModel(
       {this.position,
@@ -81,18 +84,30 @@ class OrderModel {
       this.zone,
       this.vehicleInformation,
       this.zoneId,
-      this.ownerId});
+      this.ownerId,
+      this.mainServiceType,
+      this.mainServiceID,
+      this.serviceDetails});
 
   OrderModel.fromJson(Map<String, dynamic> json) {
     serviceId = json['serviceId'];
     sourceLocationName = json['sourceLocationName'];
     paymentType = json['paymentType'];
     destinationLocationName = json['destinationLocationName'];
-    sourceLocationLAtLng = json['sourceLocationLAtLng'] != null ? LocationLatLng.fromJson(json['sourceLocationLAtLng']) : null;
-    destinationLocationLAtLng = json['destinationLocationLAtLng'] != null ? LocationLatLng.fromJson(json['destinationLocationLAtLng']) : null;
-    coupon = json['coupon'] != null ? CouponModel.fromJson(json['coupon']) : null;
-    someOneElse = json['someOneElse'] != null ? ContactModel.fromJson(json['someOneElse']) : null;
-    vehicleInformation = json['vehicleInformation'] != null ? VehicleInformation.fromJson(json['vehicleInformation']) : null;
+    sourceLocationLAtLng = json['sourceLocationLAtLng'] != null
+        ? LocationLatLng.fromJson(json['sourceLocationLAtLng'])
+        : null;
+    destinationLocationLAtLng = json['destinationLocationLAtLng'] != null
+        ? LocationLatLng.fromJson(json['destinationLocationLAtLng'])
+        : null;
+    coupon =
+        json['coupon'] != null ? CouponModel.fromJson(json['coupon']) : null;
+    someOneElse = json['someOneElse'] != null
+        ? ContactModel.fromJson(json['someOneElse'])
+        : null;
+    vehicleInformation = json['vehicleInformation'] != null
+        ? VehicleInformation.fromJson(json['vehicleInformation'])
+        : null;
     id = json['id'];
     userId = json['userId'];
     offerRate = json['offerRate'];
@@ -113,12 +128,19 @@ class OrderModel {
     rejectedDriverId = json['rejectedDriverId'];
     paymentStatus = json['paymentStatus'];
     isAcSelected = json['isAcSelected'];
-    position = json['position'] != null ? Positions.fromJson(json['position']) : null;
-    service = json['service'] != null ? ServiceModel.fromJson(json['service']) : null;
-    adminCommission = json['adminCommission'] != null ? AdminCommission.fromJson(json['adminCommission']) : null;
+    position =
+        json['position'] != null ? Positions.fromJson(json['position']) : null;
+    service =
+        json['service'] != null ? ServiceModel.fromJson(json['service']) : null;
+    adminCommission = json['adminCommission'] != null
+        ? AdminCommission.fromJson(json['adminCommission'])
+        : null;
     zone = json['zone'] != null ? ZoneModel.fromJson(json['zone']) : null;
     zoneId = json['zoneId'];
     ownerId = json['ownerId'];
+    mainServiceType = json['mainServiceType'];
+    mainServiceID = json['mainServiceID'];
+    serviceDetails = json['serviceDetails'];
     if (json['taxList'] != null) {
       taxList = <TaxModel>[];
       json['taxList'].forEach((v) {
@@ -179,6 +201,11 @@ class OrderModel {
     data['paymentStatus'] = paymentStatus;
     data['isAcSelected'] = isAcSelected;
     data['ownerId'] = ownerId;
+    data['mainServiceType'] = mainServiceType;
+    data['mainServiceID'] = mainServiceID;
+    if (serviceDetails != null) {
+      data['serviceDetails'] = serviceDetails;
+    }
     if (taxList != null) {
       data['taxList'] = taxList!.map((v) => v.toJson()).toList();
     }

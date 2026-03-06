@@ -73,7 +73,7 @@ class LoginScreen extends StatelessWidget {
 
                       /// Title
                       Text(
-                        "Entrez votre numéro".tr,
+                        "Enter your number".tr,
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 32,
                           fontWeight: FontWeight.w700,
@@ -86,7 +86,7 @@ class LoginScreen extends StatelessWidget {
 
                       /// Subtitle
                       Text(
-                        "Nous vous enverrons un code par SMS".tr,
+                        "We will send you a code by SMS".tr,
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 14,
                           color: Colors.black87,
@@ -105,7 +105,7 @@ class LoginScreen extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                "Pays".tr,
+                                "Country".tr,
                                 style: GoogleFonts.plusJakartaSans(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w700,
@@ -155,7 +155,7 @@ class LoginScreen extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  "Numéro de téléphone".tr,
+                                  "Phone number".tr,
                                   style: GoogleFonts.plusJakartaSans(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w700,
@@ -222,7 +222,7 @@ class LoginScreen extends StatelessWidget {
                             elevation: 0,
                           ),
                           child: Text(
-                            "Continuer".tr,
+                            "Continue".tr,
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 15,
                               fontWeight: FontWeight.w600,
@@ -266,7 +266,7 @@ class LoginScreen extends StatelessWidget {
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 14),
                             child: Text(
-                              "Ou connectez-vous avec".tr,
+                              "Or sign in with".tr,
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w500,

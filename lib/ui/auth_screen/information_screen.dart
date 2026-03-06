@@ -90,7 +90,8 @@ class InformationScreen extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _InputFieldLabel(label: "Pays".tr, isDark: false),
+                              _InputFieldLabel(
+                                  label: "Country".tr, isDark: false),
                               _CountryPickerField(
                                 initialSelection: controller.countryCode.value,
                                 onCountryChanged: (value) => controller
@@ -256,7 +257,6 @@ class InformationScreen extends StatelessWidget {
                             .then((value) {
                           ShowToastDialog.closeLoader();
                           if (value == true) {
-
                             Get.offAll(const DashBoardScreen());
                           }
                         });
@@ -265,7 +265,6 @@ class InformationScreen extends StatelessWidget {
                   },
                 ),
                 const SizedBox(height: 50),
-
               ],
             ),
           ),

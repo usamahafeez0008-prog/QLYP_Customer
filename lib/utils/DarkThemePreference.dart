@@ -10,6 +10,6 @@ class DarkThemePreference {
 
   Future<int> getTheme() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    return prefs.getInt(THEME_STATUS) ?? 2;
+    return prefs.getInt(THEME_STATUS) ?? 1;
   }
 }

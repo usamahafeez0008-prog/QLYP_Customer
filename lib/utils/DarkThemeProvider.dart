@@ -4,7 +4,7 @@ import 'package:flutter/scheduler.dart';
 
 class DarkThemeProvider with ChangeNotifier {
   DarkThemePreference darkThemePreference = DarkThemePreference();
-  int _darkTheme = 0;
+  int _darkTheme = 1;
 
   int get darkTheme => _darkTheme;
 
@@ -20,7 +20,7 @@ class DarkThemeProvider with ChangeNotifier {
     } else if (_darkTheme == 1) {
       return false;
     } else {
-      return true;
+      return false;
     }
   }
 

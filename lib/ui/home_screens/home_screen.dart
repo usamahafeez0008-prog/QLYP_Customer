@@ -1112,7 +1112,10 @@ class HomeScreen extends StatelessWidget {
                               ),
                               child: DropdownButtonHideUnderline(
                                 child: DropdownButton<String>(
-                                  value: controller.logistiqueFloor.value,
+                                  value: floorOptions.contains(
+                                          controller.logistiqueFloor.value)
+                                      ? controller.logistiqueFloor.value
+                                      : floorOptions.first,
                                   isDense: true,
                                   isExpanded: true,
                                   style: GoogleFonts.poppins(

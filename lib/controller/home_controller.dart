@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:customer/constant/constant.dart';
 import 'package:customer/constant/show_toast_dialog.dart';
@@ -264,8 +266,7 @@ class HomeController extends GetxController {
         Marker(
           markerId: const MarkerId("source"),
           position: LatLng(srcLat, srcLng),
-          icon:
-              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+          icon: await getMarkerIcon(AppColors.qlypDeepNavy),
           infoWindow: const InfoWindow(title: 'Départ'),
         ),
       );
@@ -275,7 +276,7 @@ class HomeController extends GetxController {
         Marker(
           markerId: const MarkerId("destination"),
           position: LatLng(dstLat, dstLng),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+          icon: await getMarkerIcon(AppColors.qlypDeepNavy),
           infoWindow: const InfoWindow(title: 'Destination'),
         ),
       );
@@ -556,7 +557,7 @@ class HomeController extends GetxController {
   // ── Logistique details fields ──────────────────────────────────────────────
   final logistiqueRoomCount = 1.obs;
   final logistiqueHasElevator = false.obs;
-  final logistiqueFloor = "Rez-de-chaussée".obs;
+  final logistiqueFloor = "Ground floor".obs;
   final logistiqueWeight = TextEditingController();
   final logistiqueDimL = TextEditingController();
   final logistiqueDimW = TextEditingController();
@@ -624,5 +625,26 @@ class HomeController extends GetxController {
       }
       isServicesLoading.value = false;
     });
+  }
+
+  Future<BitmapDescriptor> getMarkerIcon(Color color) async {
+    final ui.PictureRecorder pictureRecorder = ui.PictureRecorder();
+    final Canvas canvas = Canvas(pictureRecorder);
+    final double radius = 30; // Marker circle radius
+
+    // Outer circle (The navy blue part)
+    final Paint paintCircle = Paint()..color = color;
+    canvas.drawCircle(Offset(radius, radius), radius, paintCircle);
+
+    // Inner circle (White center)
+    final Paint paintWhite = Paint()..color = Colors.white;
+    canvas.drawCircle(Offset(radius, radius), radius * 0.4, paintWhite);
+
+    final ui.Image image = await pictureRecorder
+        .endRecording()
+        .toImage((radius * 2).toInt(), (radius * 2).toInt());
+    final ByteData? byteData =
+        await image.toByteData(format: ui.ImageByteFormat.png);
+    return BitmapDescriptor.fromBytes(byteData!.buffer.asUint8List());
   }
 }

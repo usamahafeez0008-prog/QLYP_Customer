@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:customer/constant/collection_name.dart';
 import 'package:customer/constant/constant.dart';
 import 'package:customer/constant/send_notification.dart';
+import 'package:customer/constant/show_toast_dialog.dart';
 import 'package:customer/controller/order_details_controller.dart';
 
 import 'package:customer/model/driver_user_model.dart';
@@ -871,6 +872,8 @@ class _DriverCard extends StatelessWidget {
                       elevation: 0,
                     ),
                     onPressed: () async {
+                      ShowToastDialog.showToast("Ride Confirm");
+                      /*
                       orderModel.acceptedDriverId = [];
                       orderModel.driverId =
                           driverIdAcceptReject.driverId.toString();
@@ -900,6 +903,7 @@ class _DriverCard extends StatelessWidget {
                         payload: {},
                       );
                       Get.back();
+                      */
                     },
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,

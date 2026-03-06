@@ -64,7 +64,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   }
 
   void getCurrentAppTheme() async {
-    themeChangeProvider.darkTheme = await themeChangeProvider.darkThemePreference.getTheme();
+    themeChangeProvider.darkTheme =
+        await themeChangeProvider.darkThemePreference.getTheme();
   }
 
   // This widget is the root of your application.
@@ -83,7 +84,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                     ? true
                     : themeChangeProvider.darkTheme == 1
                         ? false
-                        : true,
+                        : false,
                 context),
             localizationsDelegates: const [
               CountryLocalizations.delegate,
